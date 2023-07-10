@@ -1,6 +1,6 @@
 # pegmd
 
-Parses a non-standard Markdown flavor to an abstract syntax tree by defining its parsing expression grammar (PEG) with [rust-peg](https://docs.rs/peg/latest/peg/). 
+Parses a non-standard Markdown flavor to an abstract syntax tree by defining its parsing expression grammar (PEG) with [pest](https://pest.rs/book/). 
 
 ## Features
 
@@ -9,7 +9,7 @@ Parses a non-standard Markdown flavor to an abstract syntax tree by defining its
 
 ## Unsupported
 
-- Document streaming. Because `rust-peg` lacks support for streaming, this crate also can't read a document from a stream.
+- Document streaming. Because `pest` lacks support for streaming, this crate also can't read a document from a stream.
 
 ## Markdown flavor notes
 
@@ -23,7 +23,7 @@ The parser's grammar deviates from [CommonMark v0.30](https://spec.commonmark.or
 - Fenced code blocks can only be opened with a backtick (`), not a tilde (~)
 - Block quotes and verbatim elements are treated the same.
 - Surrounding text with underscores, \_like this\_, creates an underline style instead of italics. To italicize text, surround it with a single asterisk, \*like this\*.
-- A blank line is required between a paragraph and start a new format type, like header, lists, quotes, or codeblocks.
+- A blank line is required between a paragraph and start a new format type, like headers, lists, quotes, or codeblocks.
 
 As an example, this file's syntax follows the rules implemented by the parser.
 
