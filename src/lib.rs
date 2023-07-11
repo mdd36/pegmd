@@ -1,5 +1,5 @@
 mod parser;
 
 pub use parser::{
-  parse_document, ParseError, Document, Section, Text, List, ListItem
+  parse_document, ParseError, Document, Section, Text, ListItem
 };

@@ -29,28 +29,13 @@ pub struct ListItem<'a> {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct List<'a> {
-    ordered: bool,
-    items: Vec<ListItem<'a>>,
-}
-
-impl <'a> List<'a> {
-    pub fn new(ordered: bool, items: Vec<ListItem<'a>>) -> Self {
-        Self {
-            ordered,
-            items
-        }
-    }
-}
-
-#[derive(Debug, PartialEq)]
 pub enum Section<'a> {
     Heading(i32, &'a str),
     Paragraph(Vec<Text<'a>>),
-    List(List<'a>),
+    BulletList(Vec<ListItem<'a>>),
+    OrderedList(Vec<ListItem<'a>>),
     Verbatim(Vec<Text<'a>>),
     Codeblock(Option<&'a str>, &'a str),
-    Plain(&'a str),
 }
 
 #[derive(Debug)]
@@ -106,8 +91,8 @@ fn parse_section<'a>(root: Pair<'a, Rule>) -> Result<Option<Section<'a>>, ParseE
         Rule::codeblock => codeblock_from_pairs(root.into_inner()),
         Rule::verbatim => Ok(Some(Section::Verbatim(inlines_from_pairs(root.into_inner())?))),
         Rule::header => header_from_pairs(root.into_inner()).map(|x| Some(x)),
-        Rule::bullet_list => Ok(Some(Section::List(List::new(false, list_items_from_pairs(root.into_inner())?)))),
-        Rule::ordered_list => Ok(Some(Section::List(List::new(true, list_items_from_pairs(root.into_inner())?)))),
+        Rule::bullet_list => Ok(Some(Section::BulletList(list_items_from_pairs(root.into_inner())?))),
+        Rule::ordered_list => Ok(Some(Section::OrderedList(list_items_from_pairs(root.into_inner())?))),
         Rule::EOI | Rule::COMMENT => Ok(None),
         ty => Err(ParseError::GrammarError(format!("Section type not implemented yet: {ty:?}\n\t{root:?}"))),
     }
@@ -594,9 +579,8 @@ mod test {
         };
 
         match &document.sections[0] {
-            Section::List(list) => {
-                assert_eq!(list.ordered, false);
-                assert_eq!(list.items, vec![
+            Section::BulletList(list) => {
+                assert_eq!(list, &vec![
                     ListItem {
                         inline_text: Some(vec![
                             Text::Plain("List item one"),
@@ -604,9 +588,9 @@ mod test {
                         ]),
                         block_items: Some(vec![
                             Section::Verbatim(vec![Text::Plain("This quote is in li 1")]),
-                            Section::List(List { ordered: false, items: vec![ 
+                            Section::BulletList(vec![ 
                                 ListItem { inline_text: Some(vec![Text::Plain("A sublist")]), block_items: None } 
-                            ]})
+                            ])
                         ])
                     },
                     ListItem {
@@ -630,9 +614,8 @@ mod test {
         }
 
         match &document.sections[2] {
-            Section::List(list) => {
-                assert_eq!(list.ordered, true);
-                assert_eq!(list.items, vec![
+            Section::OrderedList(list) => {
+                assert_eq!(list, &vec![
                     ListItem { inline_text: Some(vec![Text::Plain("An ordered list")]), block_items: None }
                 ]);
             },
@@ -640,9 +623,8 @@ mod test {
         }
 
         match &document.sections[3] {
-            Section::List(list) => {
-                assert_eq!(list.ordered, false);
-                assert_eq!(list.items, vec![
+            Section::BulletList(list) => {
+                assert_eq!(list, &vec![
                     ListItem { inline_text: Some(vec![Text::Plain("Now this is a new bullet list")]), block_items: None }
                 ]);
             },
