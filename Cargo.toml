@@ -7,9 +7,7 @@ edition = "2021"
 
 [dependencies]
 pest = "2.7"
-pest_derive = { version = "2.7", features = [ "grammar-extras" ] }
-strum = "0.25"
-strum_macros = "0.25"
+pest_derive = "2.7"
 
 [dev-dependencies]
 indoc = "2"

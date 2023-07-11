@@ -2,7 +2,6 @@ use std::fmt::Display;
 
 use pest::{iterators::{Pairs, Pair}, Parser};
 use pest_derive::Parser;
-use strum_macros::Display;
 
 #[derive(Debug, PartialEq)]
 pub enum Text<'a> {
@@ -11,10 +10,16 @@ pub enum Text<'a> {
     Italic(&'a str),
     Underline(&'a str),
     Strikethrough(&'a str),
-    Link(&'a str, &'a str),
-    Image(&'a str, &'a str),
+    Link(Link<'a>),
+    Image(Link<'a>),
     InlineCode(&'a str),
     Linebreak,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Link<'a> {
+    alt: &'a str,
+    uri: &'a str,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -76,8 +81,8 @@ impl From<pest::error::Error<Rule>> for ParseError {
 impl Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::GrammarError(msg) => write!(f, "GrammarError:\n{msg}"),
-            Self::MalformedInput(msg) => write!(f, "MalformedInput:\n{msg}"),
+            Self::GrammarError(msg) => write!(f, "GrammarError: {msg}"),
+            Self::MalformedInput(msg) => write!(f, "MalformedInput: {msg}"),
         }
     }
 }
@@ -104,7 +109,7 @@ fn parse_section<'a>(root: Pair<'a, Rule>) -> Result<Option<Section<'a>>, ParseE
         Rule::bullet_list => Ok(Some(Section::List(List::new(false, list_items_from_pairs(root.into_inner())?)))),
         Rule::ordered_list => Ok(Some(Section::List(List::new(true, list_items_from_pairs(root.into_inner())?)))),
         Rule::EOI | Rule::COMMENT => Ok(None),
-        ty => Err(ParseError::GrammarError(format!("Section type not implemented yet: {ty:?}"))),
+        ty => Err(ParseError::GrammarError(format!("Section type not implemented yet: {ty:?}\n\t{root:?}"))),
     }
 }
 
@@ -141,13 +146,14 @@ fn list_item_from_pairs<'a>(mut root: Pairs<'a, Rule>) -> Result<ListItem<'a>, P
     Ok(ListItem { inline_text, block_items })
 }
 
-fn codeblock_from_pairs<'a>(root: Pairs<'a, Rule>) -> Result<Option<Section<'a>>, ParseError> {
+fn codeblock_from_pairs<'a>(mut root: Pairs<'a, Rule>) -> Result<Option<Section<'a>>, ParseError> {
     let lang = root
-        .find_first_tagged("lang")
-        .map(|n| n.as_str());
+        .next()
+        .map(|n| n.as_str())
+        .filter(|lang| !lang.is_empty());
     let body = root
-        .find_first_tagged("body")
-        .ok_or(ParseError::MalformedInput(format!("Failed to find body for paragraph in {}", root.as_str())))?
+        .next()
+        .ok_or(ParseError::MalformedInput(format!("Failed to find body for paragraph in {root:?}")))?
         .as_str();
     Ok(Some(Section::Codeblock(lang, body)))
 }
@@ -157,10 +163,10 @@ fn header_from_pairs<'a>(mut root: Pairs<'a, Rule>) -> Result<Section<'a>, Parse
     // so it's safe mutate
     let hashes = root
         .find_map(|n| if n.as_rule() == Rule::header_hashes { Some(n.as_str()) } else { None })
-        .ok_or(ParseError::MalformedInput(format!("Failed to find hashes for header in: {}", root.as_str())))?;
+        .ok_or(ParseError::MalformedInput(format!("Failed to find hashes for header in: {root:?}")))?;
     let title = root
         .find_map(|n| if n.as_rule() == Rule::header_title { Some(n.as_str()) } else { None })
-        .ok_or(ParseError::MalformedInput(format!("Failed to find title for header in {}", root.as_str())))?;
+        .ok_or(ParseError::MalformedInput(format!("Failed to find title for header in {root:?}")))?;
     Ok(Section::Heading(hashes.len() as i32, title))
 
 }
@@ -179,32 +185,32 @@ fn text_from_pair<'a>(node: Pair<'a, Rule>) -> Result<Option<Text<'a>>, ParseErr
         Rule::underline => Ok(Some(Text::Underline(node.as_str()))),
         Rule::inline_code => Ok(Some(Text::InlineCode(node.as_str()))),
         Rule::strikethrough => Ok(Some(Text::Strikethrough(node.as_str()))),
-        Rule::link => {
-          let inner = node.into_inner();
-          let url = inner
-            .find_first_tagged("url")
-            .ok_or(ParseError::MalformedInput(format!("Failed to find url in {}", inner.as_str())))?
-            .as_str();
-          let alt = inner
-            .find_first_tagged("alt")
-            .map_or(url, |node| node.as_str());
-          Ok(Some(Text::Link(alt, url)))
-        }
-        Rule::image => {
-          let inner = node.into_inner();
-          let url = inner
-            .find_first_tagged("url")
-            .ok_or(ParseError::MalformedInput(format!("Failed to find url in {}", inner.as_str())))?
-            .as_str();
-          let alt = inner
-            .find_first_tagged("alt")
-            .map_or(url, |node| node.as_str());
-          Ok(Some(Text::Image(alt, url)))
-        }
+        Rule::directed_link | Rule::autolink => Ok(Some(Text::Link(link_from_pair(node)?))),
+        Rule::image => Ok(Some(Text::Image(link_from_pair(node)?))),
         Rule::EOI | Rule::COMMENT => Ok(None),
         Rule::linebreak => Ok(Some(Text::Linebreak)),
-        ty => unreachable!("Text not implemented yet: {ty:?}"),
+        ty => Err(ParseError::GrammarError(format!("Text rule not implemented yet: {ty:?}\n\t{node:?}"))),
     }
+}
+
+fn link_from_pair<'a>(node: Pair<'a, Rule>) -> Result<Link<'a>, ParseError> {
+    let link_type = node.as_rule();
+    let mut inner = node.into_inner();
+    let alt = match link_type {
+        Rule::autolink => None,
+        Rule::image | Rule::directed_link => Some(
+            inner.next()
+                .map(|n| n.as_str())
+                .ok_or(ParseError::MalformedInput(format!("Failed to find alt text for link in {inner:?}")))?
+        ),
+        rule => return Err(ParseError::MalformedInput(format!("Unexpected rule found while attempting to parse a link: {rule:?}\n\t{inner:?}"))),
+    };
+
+    let uri = inner.next()
+        .map(|n| n.as_str())
+        .ok_or(ParseError::MalformedInput(format!("URI missing from link {inner:?}")))?;
+
+    Ok(Link { alt: alt.unwrap_or(uri), uri })
 }
 
 
@@ -343,9 +349,9 @@ mod test {
 
         assert_eq!(text, &vec![
             Text::Plain("A simple test that "),
-            Text::Link("links", "www.google.com"),
+            Text::Link(Link { alt: "links", uri: "www.google.com" }),
             Text::Plain(" to "),
-            Text::Link("www.wikipedia.com", "www.wikipedia.com"),
+            Text::Link(Link { alt: "www.wikipedia.com", uri: "www.wikipedia.com" }),
             Text::Plain(" render."),
         ]);
     }
@@ -373,7 +379,7 @@ mod test {
             Text::Plain(" like "),
             Text::Underline("underlines"),
             Text::Plain(", "),
-            Text::Link("links", "www.google.com"),
+            Text::Link(Link { alt: "links", uri: "www.google.com" }),
             Text::Plain(", and "),
             Text::InlineCode("code"),
             Text::Plain("."),
@@ -518,8 +524,8 @@ mod test {
         match &document.sections[0] {
             Section::Paragraph(items) => {
                 assert_eq!(*items, vec![
-                    Text::Image("alt text", "destination.co"),
-                    Text::Image("another one", "target.io")
+                    Text::Image(Link { alt: "alt text", uri: "destination.co" } ),
+                    Text::Image(Link { alt: "another one", uri: "target.io"}),
                 ]);
             },
             section => panic!("Unexpected section type: {section:?}"),

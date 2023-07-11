@@ -19,7 +19,7 @@ char = _{ ANY }
 markup = _{ strong_markup | italic_markup | strikethrough_markup | inline_code_markup | underline_markup | image | link }
 str = { (!(markup | endline | NEWLINE) ~ char)+ }
 
-normal_endline = _{ space? ~ NEWLINE ~ !blank_line }
+normal_endline = _{ space? ~ NEWLINE ~ !blank_line ~ !">" ~ !header_hashes }
 trailing_endline = _{ space* ~ NEWLINE ~ EOI }
 linebreak = { "  " ~ normal_endline }
 endline = _{ normal_endline | trailing_endline | linebreak }
@@ -39,9 +39,9 @@ header = { non_indent_space? ~ header_hashes ~ space* ~ header_title ~ space* ~ 
 
 codeblock_close = _{ "```" }
 codeblock_open = _{ non_indent_space? ~ unescaped_backtick ~ "``" }
-codeblock_lang = { ASCII_ALPHANUMERIC+ }
+codeblock_lang = { ASCII_ALPHANUMERIC* }
 codeblock_body = { (!"```" ~ ((!NEWLINE ~ ANY) | (NEWLINE+ ~ space* ~ !codeblock_close)))+ }
-codeblock = { codeblock_open ~ space* ~ #lang = codeblock_lang? ~ space* ~ NEWLINE ~ #body = codeblock_body ~ NEWLINE? ~ space* ~ codeblock_close }
+codeblock = { codeblock_open ~ space* ~ codeblock_lang ~ space* ~ NEWLINE ~ codeblock_body ~ NEWLINE? ~ space* ~ codeblock_close }
 
 end_list = { space* ~ COMMENT }
 
@@ -81,8 +81,8 @@ one_underscore_close = _{ !(space | NEWLINE) ~ unescaped_underscore }
 underline = { (!(NEWLINE | one_underscore_close) ~ ANY)+ }
 underline_markup = _{ one_underscore_open ~ underline ~ one_underscore_close }
 
-directed_link = _{ "[" ~ #alt = alt_text ~ "](" ~ #url = url ~ ")" }
-autolink = { "<" ~ #url = url ~ ">" }
-link = { directed_link | autolink }
+directed_link = { "[" ~ alt_text ~ "](" ~ url ~ ")" }
+autolink = { "<" ~ url ~ ">" }
+link = _{ directed_link | autolink }
 
-image = { space* ~ "![" ~ #alt = alt_text ~ "](" ~ #url = url ~ ")" }
+image = { space* ~ "![" ~ alt_text ~ "](" ~ url ~ ")" }
