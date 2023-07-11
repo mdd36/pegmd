@@ -48,12 +48,13 @@ end_list = { space* ~ COMMENT }
 list_content_start = { inline ~ (NEWLINE ~ PEEK_ALL ~ !(bullet | enumerator | space) ~ inline)* }
 list_content_continuation = ${ (!end_list ~ PEEK_ALL ~ (&space{2,} | !(bullet | enumerator)) ~ section_contents ~ blank_line*)+ }
 
-bullet = _{ ("*" | "-" | "+") ~ space+ }
+bullet = { ("*" | "-" | "+") ~ space+ }
 bullet_list_item = { !space ~ bullet ~ list_content_start? ~ blank_line* ~ list_content_continuation? }
 bullet_list = ${ PUSH(space*) ~ bullet_list_item ~ (!end_list ~ PEEK_ALL ~ bullet_list_item)* ~ DROP }
 
-enumerator = _{ ASCII_DIGIT{1,3} ~ ("." | ")") ~ space+ }
-ordered_list_item = { !space ~ enumerator ~ list_content_start? ~ blank_line* ~ list_content_continuation? }
+enumerator = { ASCII_DIGIT{1,3} }
+ordered_list_item_number = _{ enumerator ~ ("." | ")") ~ space+ }
+ordered_list_item = { !space ~ ordered_list_item_number ~ list_content_start? ~ blank_line* ~ list_content_continuation? }
 ordered_list = ${ PUSH(space*) ~ ordered_list_item ~ (!end_list ~ PEEK_ALL ~ ordered_list_item)* ~ DROP }
 
 two_star_open = _{ unescaped_asterisk ~ "*" ~ !(space | NEWLINE) }

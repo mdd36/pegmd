@@ -1,9 +1,14 @@
 [package]
 name = "pegmd"
 version = "0.1.0"
+authors = [ "Matthew Dickson <hi@mattdickson.io>" ]
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "A PEG based markdown parser for creating an Abstract Syntax Tree"
+readme = "README.md"
+repository = "https://github.com/mdd36/pegmd"
+license = "MIT"
+categories = [ "parser-implementations" ]
+keywords = [ "markdown", "peg" ]
 
 [dependencies]
 pest = "2.7"
