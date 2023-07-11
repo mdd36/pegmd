@@ -17,25 +17,35 @@ pub enum Text<'a> {
     Linebreak,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default, PartialEq)]
 pub struct ListItem<'a> {
-    sublist: Option<Box<List<'a>>>,
-    text: Vec<Text<'a>>,
+    inline_text: Option<Vec<Text<'a>>>,
+    block_items: Option<Vec<Section<'a>>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct List<'a> {
     ordered: bool,
-    elements: Vec<ListItem<'a>>,
+    items: Vec<ListItem<'a>>,
 }
 
-#[derive(Debug)]
+impl <'a> List<'a> {
+    pub fn new(ordered: bool, items: Vec<ListItem<'a>>) -> Self {
+        Self {
+            ordered,
+            items
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub enum Section<'a> {
     Heading(i32, &'a str),
     Paragraph(Vec<Text<'a>>),
     List(List<'a>),
     Verbatim(Vec<Text<'a>>),
     Codeblock(Option<&'a str>, &'a str),
+    Plain(&'a str),
 }
 
 #[derive(Debug)]
@@ -66,8 +76,8 @@ impl From<pest::error::Error<Rule>> for ParseError {
 impl Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::GrammarError(msg) => write!(f, "GrammarError({msg})"),
-            Self::MalformedInput(msg) => write!(f, "MalformedInput({msg})"),
+            Self::GrammarError(msg) => write!(f, "GrammarError:\n{msg}"),
+            Self::MalformedInput(msg) => write!(f, "MalformedInput:\n{msg}"),
         }
     }
 }
@@ -78,13 +88,11 @@ pub struct MarkdownParser;
 
 pub fn parse_document<'a>(input: &'a str) -> Result<Document<'a>, ParseError> {
     let sections = MarkdownParser::parse(Rule::document, input)?;
-    let mut parsed_sections = Vec::new();
-    for section in sections {
-      if let Some(s) = parse_section(section)? {
-        parsed_sections.push(s);
-      }
-    }
-    Ok(Document::new(parsed_sections))
+    let parsed_sections: Result<Vec<Section<'a>>, ParseError> = sections.into_iter()
+        .filter_map(|section| parse_section(section).transpose())
+        .collect();
+    Ok(Document::new(parsed_sections?))
+
 }
 
 fn parse_section<'a>(root: Pair<'a, Rule>) -> Result<Option<Section<'a>>, ParseError> {
@@ -93,9 +101,44 @@ fn parse_section<'a>(root: Pair<'a, Rule>) -> Result<Option<Section<'a>>, ParseE
         Rule::codeblock => codeblock_from_pairs(root.into_inner()),
         Rule::verbatim => Ok(Some(Section::Verbatim(inlines_from_pairs(root.into_inner())?))),
         Rule::header => header_from_pairs(root.into_inner()).map(|x| Some(x)),
-        Rule::EOI => Ok(None),
+        Rule::bullet_list => Ok(Some(Section::List(List::new(false, list_items_from_pairs(root.into_inner())?)))),
+        Rule::ordered_list => Ok(Some(Section::List(List::new(true, list_items_from_pairs(root.into_inner())?)))),
+        Rule::EOI | Rule::COMMENT => Ok(None),
         ty => Err(ParseError::GrammarError(format!("Section type not implemented yet: {ty:?}"))),
     }
+}
+
+fn list_items_from_pairs<'a>(root: Pairs<'a, Rule>) -> Result<Vec<ListItem<'a>>, ParseError> {
+    root.into_iter()
+        .map(|list_item| list_item_from_pairs(list_item.into_inner()))
+        .collect()
+}
+
+fn list_item_from_pairs<'a>(mut root: Pairs<'a, Rule>) -> Result<ListItem<'a>, ParseError> {
+    let first_node = match root.next() {
+        Some(n) => n,
+        None => return Ok(ListItem::default())
+    };
+
+    if first_node.as_rule() == Rule::list_content_continuation {
+        let block_items: Result<Vec<Section<'a>>, ParseError> = first_node.into_inner()
+            .filter_map(|section| parse_section(section).transpose())
+            .collect();
+        return Ok(ListItem { inline_text: None, block_items: Some(block_items?) })
+    }
+
+    let inline_text = Some(inlines_from_pairs(first_node.into_inner())?);
+    let block_items = match root.next() {
+        Some(pair) => {
+            let parsed_content: Result<Vec<Section<'a>>, ParseError> = pair.into_inner()
+            .flat_map(|section| parse_section(section).transpose())
+            .collect();
+            Some(parsed_content?)
+        },
+        None => None,
+    };
+
+    Ok(ListItem { inline_text, block_items })
 }
 
 fn codeblock_from_pairs<'a>(root: Pairs<'a, Rule>) -> Result<Option<Section<'a>>, ParseError> {
@@ -123,14 +166,9 @@ fn header_from_pairs<'a>(mut root: Pairs<'a, Rule>) -> Result<Section<'a>, Parse
 }
 
 fn inlines_from_pairs<'a>(root: Pairs<'a, Rule>) -> Result<Vec<Text<'a>>, ParseError> {
-    let mut nodes = Vec::new();
-    for node in root {
-      if let Some(n) = text_from_pair(node)? {
-        nodes.push(n);
-      }
-    }
-
-    Ok(nodes)
+    root.into_iter()
+        .filter_map(|inline| text_from_pair(inline).transpose())
+        .collect()
 }
 
 fn text_from_pair<'a>(node: Pair<'a, Rule>) -> Result<Option<Text<'a>>, ParseError> {
@@ -163,7 +201,7 @@ fn text_from_pair<'a>(node: Pair<'a, Rule>) -> Result<Option<Text<'a>>, ParseErr
             .map_or(url, |node| node.as_str());
           Ok(Some(Text::Image(alt, url)))
         }
-        Rule::EOI => Ok(None),
+        Rule::EOI | Rule::COMMENT => Ok(None),
         Rule::linebreak => Ok(Some(Text::Linebreak)),
         ty => unreachable!("Text not implemented yet: {ty:?}"),
     }
@@ -173,10 +211,14 @@ fn text_from_pair<'a>(node: Pair<'a, Rule>) -> Result<Option<Text<'a>>, ParseErr
 #[cfg(test)]
 mod test {
     use super::*;
+    use indoc::indoc;
 
     #[test]
     pub fn basic_bold_test() {
-        let document = match parse_document("A basic test that **bold** text renders. Ignores **bold\n** if a line break occurs.") {
+        let document = match parse_document(indoc! {"
+            A basic test that **bold** text renders. Ignores **bold
+            ** if a line break occurs.
+        "}) {
             Ok(d) => d,
             Err(e) => panic!("Failed to parse document: {e}")
         };
@@ -196,7 +238,10 @@ mod test {
 
     #[test]
     pub fn basic_italic_test() {
-        let document = match parse_document("A basic test that *italic* text renders. Ignores *italic\n* if a line break occurs.") {
+        let document = match parse_document(indoc! {"
+            A basic test that *italic* text renders. Ignores *italic
+            * if a line break occurs.
+        "}) {
             Ok(d) => d,
             Err(e) => panic!("Failed to parse document: {e}")
         };
@@ -216,7 +261,10 @@ mod test {
 
     #[test]
     pub fn basic_strike_through_test() {
-        let document = match parse_document("A basic test that ~~strike through~~ text renders. Ignores ~~strike through\n~~ if a line break occurs.") {
+        let document = match parse_document(indoc! {"
+            A basic test that ~~strike through~~ text renders. Ignores ~~strike through
+            ~~ if a line break occurs.
+        "}) {
             Ok(d) => d,
             Err(e) => panic!("Failed to parse document: {e}")
         };
@@ -236,7 +284,10 @@ mod test {
 
     #[test]
     pub fn basic_underline_test() {
-        let document = match parse_document("A basic test that _underline_ text renders. Ignores _underline\n_ if a line break occurs.") {
+        let document = match parse_document(indoc! {"
+            A basic test that _underline_ text renders. Ignores _underline
+            _ if a line break occurs.
+        "}) {
             Ok(d) => d,
             Err(e) => panic!("Failed to parse document: {e}")
         };
@@ -256,7 +307,9 @@ mod test {
 
     #[test]
     pub fn basic_inline_code_test() {
-        let document = match parse_document("A basic test that `code` text renders. Ignores `code\n` if a line break occurs.") {
+        let document = match parse_document(indoc! {"
+            A basic test that `code` text renders. Ignores `code\n` if a line break occurs.
+        "}) {
             Ok(d) => d,
             Err(e) => panic!("Failed to parse document: {e}")
         };
@@ -276,7 +329,9 @@ mod test {
 
     #[test]
     pub fn basic_link_test() {
-        let document = match parse_document("A simple test that [links](www.google.com) to <www.wikipedia.com> render.") {
+        let document = match parse_document(indoc! {"
+            A simple test that [links](www.google.com) to <www.wikipedia.com> render.
+        "}) {
             Ok(d) => d,
             Err(e) => panic!("Failed to parse document: {e}")
         };
@@ -297,7 +352,10 @@ mod test {
 
     #[test]
     pub fn intermixed_markup_test() {
-        let document = match parse_document("Some **intermixed** *styles* like _underlines_, [links](www.google.com), and `code`.") {
+        let document = match parse_document(indoc! {"
+            Some **intermixed** *styles* like _underlines_, [links](www.google.com), and `code`.
+        
+        "}) {
             Ok(d) => d,
             Err(e) => panic!("Failed to parse document: {e}")
         };
@@ -324,7 +382,13 @@ mod test {
 
     #[test]
     pub fn paragraph_separation_test() {
-        let document = match parse_document("This is the first paragraph.\nThis line is still part of that paragraph.\n\n  This is a new paragraph.  \nIt has different lines within it.") {
+        let document = match parse_document(indoc! {"
+            This is the first paragraph.
+            This line is still part of that paragraph.
+            
+            This is a new paragraph.  
+            It has different lines within it.
+        "}) {
             Ok(d) => d,
             Err(e) => panic!("Failed to parse document: {e}")
         };
@@ -355,7 +419,13 @@ mod test {
 
     #[test]
     pub fn block_quote_test() {
-        let document = match parse_document("This is the first paragraph.\n\n    This is a block quote.\n\n>This is also a block quote.") {
+        let document = match parse_document(indoc! {"
+            This is the first paragraph.
+            
+                This is a block quote.
+                
+            > This is also a block quote.
+        "}) {
             Ok(d) => d,
             Err(e) => panic!("Failed to parse document: {e}")
         };
@@ -392,7 +462,19 @@ mod test {
 
     #[test]
     pub fn code_block_test() {
-        let document = match parse_document("```python\nprint('hello world')\n```\n\n``` sh \n    echo 'hello world'\n```\n\n```  \n  puts 'hello world'\n```") {
+        let document = match parse_document(indoc! {"
+            ```python
+            print('hello world')
+            ```
+            
+            ``` sh 
+                echo 'hello world'
+            ```
+            
+            ```  
+              puts 'hello world'
+            ```
+        "}) {
             Ok(d) => d,
             Err(e) => panic!("Failed to parse document: {e}")
         };
@@ -426,7 +508,9 @@ mod test {
 
     #[test]
     pub fn image_test() {
-        let document = match parse_document("![alt text](destination.co) ![another one](target.io)") {
+        let document = match parse_document(indoc! {"
+            ![alt text](destination.co) ![another one](target.io)
+        "}) {
             Ok(d) => d,
             Err(e) => panic!("Failed to parse document: {e}")
         };
@@ -444,7 +528,13 @@ mod test {
 
     #[test]
     pub fn header_test() {
-        let document = match parse_document("  # Header 1 \n\n####   Header 4\n\n####### Too many hashes for a header") {
+        let document = match parse_document(indoc! {"
+              # Header 1 
+            
+            ####   Header 4
+            
+            ####### Too many hashes for a header
+        "}) {
             Ok(d) => d,
             Err(e) => panic!("Failed to parse document: {e}")
         };
@@ -472,5 +562,85 @@ mod test {
             },
             section => panic!("Unexpected section type: {section:?}"),
         };
-    }    
+    }
+
+    #[test]
+    pub fn simple_list_test() {
+        let document = match parse_document(indoc! {"
+            * List item one
+            This is a continuation of the last block
+            
+            > This quote is in li 1
+            
+              * A sublist
+            * List item two
+            
+            * Lists can span blank lines
+            
+            [//]: # (break the list)
+            This text is not in the list
+            
+            1. An ordered list
+            * Now this is a new bullet list
+        "}) {
+            Ok(d) => d,
+            Err(e) => panic!("Failed to parse document: {e}")
+        };
+
+        match &document.sections[0] {
+            Section::List(list) => {
+                assert_eq!(list.ordered, false);
+                assert_eq!(list.items, vec![
+                    ListItem {
+                        inline_text: Some(vec![
+                            Text::Plain("List item one"),
+                            Text::Plain("This is a continuation of the last block")
+                        ]),
+                        block_items: Some(vec![
+                            Section::Verbatim(vec![Text::Plain("This quote is in li 1")]),
+                            Section::List(List { ordered: false, items: vec![ 
+                                ListItem { inline_text: Some(vec![Text::Plain("A sublist")]), block_items: None } 
+                            ]})
+                        ])
+                    },
+                    ListItem {
+                        inline_text: Some(vec![Text::Plain("List item two")]),
+                        block_items: None,
+                    },
+                    ListItem {
+                        inline_text: Some(vec![Text::Plain("Lists can span blank lines")]),
+                        block_items: None,
+                    },
+                ]);
+            },
+            section => panic!("Unexpected section type: {section:?}"),
+        }
+
+        match &document.sections[1] {
+            Section::Paragraph(contents) => {
+                assert_eq!(contents, &vec![Text::Plain("This text is not in the list")])
+            },
+            section => panic!("Unexpected section type: {section:?}"),
+        }
+
+        match &document.sections[2] {
+            Section::List(list) => {
+                assert_eq!(list.ordered, true);
+                assert_eq!(list.items, vec![
+                    ListItem { inline_text: Some(vec![Text::Plain("An ordered list")]), block_items: None }
+                ]);
+            },
+            section => panic!("Unexpected section type: {section:?}"),
+        }
+
+        match &document.sections[3] {
+            Section::List(list) => {
+                assert_eq!(list.ordered, false);
+                assert_eq!(list.items, vec![
+                    ListItem { inline_text: Some(vec![Text::Plain("Now this is a new bullet list")]), block_items: None }
+                ]);
+            },
+            section => panic!("Unexpected section type: {section:?}"),
+        }
+    }
 }

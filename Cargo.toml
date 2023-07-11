@@ -10,3 +10,6 @@ pest = "2.7"
 pest_derive = { version = "2.7", features = [ "grammar-extras" ] }
 strum = "0.25"
 strum_macros = "0.25"
+
+[dev-dependencies]
+indoc = "2"

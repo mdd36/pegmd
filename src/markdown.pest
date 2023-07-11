@@ -1,6 +1,8 @@
 document = _{ SOI ~ section* ~ EOI }
 section = _{ blank_line* ~ section_contents ~ blank_line* }
-section_contents = _{ codeblock | header | verbatim | paragraph }
+section_contents = _{ codeblock | header | bullet_list | ordered_list | verbatim | paragraph }
+
+COMMENT = { ("[//]: # (" ~ ("\\)" | (!")" ~ ANY))* ~ ")") | "<!--" ~ (!"-->" ~ ANY)+ ~ "-->" }
 
 space = _{ " " | "\t" }
 
@@ -13,7 +15,7 @@ unescaped_backtick = _{ !"\\" ~ "`" }
 unescaped_hash = _{ !"\\" ~ "#" }
 unescaped_underscore = _{ !"\\" ~ "_" }
 
-char = { ANY }
+char = _{ ANY }
 markup = _{ strong_markup | italic_markup | strikethrough_markup | inline_code_markup | underline_markup | image | link }
 str = { (!(markup | endline | NEWLINE) ~ char)+ }
 
@@ -22,14 +24,14 @@ trailing_endline = _{ space* ~ NEWLINE ~ EOI }
 linebreak = { "  " ~ normal_endline }
 endline = _{ normal_endline | trailing_endline | linebreak }
 
-inline = _{ markup | str }
+inline = _{ (markup | str) }
 inlines = _{ ((!endline ~ inline) | (endline ~ &inline))+ ~ endline? }
 
 alt_text = { (!"]" ~ !NEWLINE ~ ANY)+ }
 url = { (!(")" | ">") ~ !space ~ !NEWLINE ~ ANY)+ }
 
 paragraph = { non_indent_space? ~ inlines ~ (blank_line+ | EOI) }
-verbatim = { (indent+ | space* ~ ">") ~ inlines }
+verbatim = { (indent+ | (non_indent_space? ~ ">" ~ space*)) ~ inlines }
 
 header_hashes = { unescaped_hash ~ "#"{0,5} ~ !"#" }
 header_title = { ((!NEWLINE ~ !space ~ ANY) | (space+ ~ !NEWLINE ~ &ANY))+ }
@@ -40,6 +42,19 @@ codeblock_open = _{ non_indent_space? ~ unescaped_backtick ~ "``" }
 codeblock_lang = { ASCII_ALPHANUMERIC+ }
 codeblock_body = { (!"```" ~ ((!NEWLINE ~ ANY) | (NEWLINE+ ~ space* ~ !codeblock_close)))+ }
 codeblock = { codeblock_open ~ space* ~ #lang = codeblock_lang? ~ space* ~ NEWLINE ~ #body = codeblock_body ~ NEWLINE? ~ space* ~ codeblock_close }
+
+end_list = { space* ~ COMMENT }
+
+list_content_start = { inline ~ (NEWLINE ~ PEEK_ALL ~ !(bullet | enumerator | space) ~ inline)* }
+list_content_continuation = ${ (!end_list ~ PEEK_ALL ~ (&space{2,} | !(bullet | enumerator)) ~ section_contents ~ blank_line*)+ }
+
+bullet = _{ ("*" | "-" | "+") ~ space+ }
+bullet_list_item = { !space ~ bullet ~ list_content_start? ~ blank_line* ~ list_content_continuation? }
+bullet_list = ${ PUSH(space*) ~ bullet_list_item ~ (!end_list ~ PEEK_ALL ~ bullet_list_item)* ~ DROP }
+
+enumerator = _{ ASCII_DIGIT{1,3} ~ ("." | ")") ~ space+ }
+ordered_list_item = { !space ~ enumerator ~ list_content_start? ~ blank_line* ~ list_content_continuation? }
+ordered_list = ${ PUSH(space*) ~ ordered_list_item ~ (!end_list ~ PEEK_ALL ~ ordered_list_item)* ~ DROP }
 
 two_star_open = _{ unescaped_asterisk ~ "*" ~ !(space | NEWLINE) }
 two_star_close = _{ !(space | NEWLINE) ~ unescaped_asterisk ~ "*" }
