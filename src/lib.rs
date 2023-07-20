@@ -1,5 +1,7 @@
 mod parser;
+mod v2;
+mod html;
 
 pub use parser::{
-  parse_document, ParseError, Document, Block, Text, ListItem
+  ParseError, Document, Block, Text, ListItem
 };

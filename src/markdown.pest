@@ -1,41 +1,45 @@
 document = _{ SOI ~ section* ~ EOI }
 section = _{ blank_line* ~ section_contents ~ blank_line* }
-section_contents = _{ codeblock | header | bullet_list | ordered_list | verbatim | paragraph }
+section_contents = _{ verbatim | reference | header | bullet_list | ordered_list | paragraph | codeblock }
 
-COMMENT = { ("[//]: # (" ~ ("\\)" | (!")" ~ ANY))* ~ ")") | "<!--" ~ (!"-->" ~ ANY)+ ~ "-->" }
+COMMENT = _{ ("[//]: # (" ~ ("\\)" | (!")" ~ ANY))* ~ ")") | "<!--" ~ (!"-->" ~ ANY)+ ~ "-->" }
 
-space = _{ " " | "\t" }
+space = { " " | "\t" }
 
 blank_line = _{ space* ~ NEWLINE }
 indent = _{ " "{4} | "\t" }
 non_indent_space = _{ " "{1,3} }
-unescaped_asterisk = _{ !"\\" ~ "*" }
-unescaped_tilde = _{ !"\\" ~ "~" }
+
+double_quote = _{ "\"" }
+single_quote = _{ "'" }
+
+special_char = _{ "~" | "*" | "_" | "`" | "&" | "[" | "]" | "(" | ")" | "<" | "!" | "#" | "\\" | "\"" }
+normal_char = _{ !special_char ~ !NEWLINE ~ !space ~ ANY }
+non_space = _{ !NEWLINE ~ !space ~ ANY }
+escaped_special_char = { "\\" ~ ("-" | "\\" | "`" | "|" | "*" | "#" | "+" | "." | "!" | "_" | "{" | "}" | "[" | "]" | "(" | ")" | "<" |">")} 
+
 unescaped_backtick = _{ !"\\" ~ "`" }
-unescaped_hash = _{ !"\\" ~ "#" }
-unescaped_underscore = _{ !"\\" ~ "_" }
 
-char = _{ ANY }
-markup = _{ strong_markup | italic_markup | strikethrough_markup | inline_code_markup | underline_markup | image | link }
-str = { (!(markup | endline | NEWLINE) ~ char)+ }
+markup = _{ strong | italic | code | image | link }
+str = { normal_char+ ~ (normal_char | "_"+ ~ &normal_char)* }
+symbol = { special_char }
 
-normal_endline = _{ space? ~ NEWLINE ~ !blank_line ~ !">" ~ !header_hashes }
+normal_endline = _{ space? ~ NEWLINE ~ !blank_line ~ !">" ~ !atx_hash }
 trailing_endline = _{ space* ~ NEWLINE ~ EOI }
 linebreak = { "  " ~ normal_endline }
 endline = _{ normal_endline | trailing_endline | linebreak }
 
-inline = _{ (markup | str) }
+inline = _{ str | endline  | space | markup | escaped_special_char | symbol }
 inlines = _{ ((!endline ~ inline) | (endline ~ &inline))+ ~ endline? }
 
-alt_text = { (!"]" ~ !NEWLINE ~ ANY)+ }
-url = { (!(")" | ">") ~ !space ~ !NEWLINE ~ ANY)+ }
+label = { (!"]" ~ !NEWLINE ~ inline)* }
+source = { (!")" ~ !">" ~ !"]" ~ non_space)+ }
 
 paragraph = { non_indent_space? ~ inlines ~ (blank_line+ | EOI) }
 verbatim = { (indent+ | (non_indent_space? ~ ">" ~ space*)) ~ inlines }
 
-header_hashes = { unescaped_hash ~ "#"{0,5} ~ !"#" }
-header_title = { ((!NEWLINE ~ !space ~ ANY) | (space+ ~ !NEWLINE ~ &ANY))+ }
-header = { non_indent_space? ~ header_hashes ~ space* ~ header_title ~ space* ~ endline? ~ (blank_line+ | EOI)}
+atx_hash = { "#"{1,6} ~ !"#" }
+header = { non_indent_space? ~ atx_hash ~ inline+ ~ endline? ~ blank_line* }
 
 codeblock_close = _{ "```" }
 codeblock_open = _{ non_indent_space? ~ unescaped_backtick ~ "``" }
@@ -45,45 +49,81 @@ codeblock = { codeblock_open ~ space* ~ codeblock_lang ~ space* ~ NEWLINE ~ code
 
 end_list = { space* ~ COMMENT }
 
-list_content_start = { inline ~ (NEWLINE ~ PEEK_ALL ~ !(bullet | enumerator | space) ~ inline)* }
-list_content_continuation = ${ (!end_list ~ PEEK_ALL ~ (&space{2,} | !(bullet | enumerator)) ~ section_contents ~ blank_line*)+ }
+inline_list_block = _{ (!blank_line ~ (inline | (NEWLINE ~ PEEK_ALL ~ space{0,1} ~ (strong | italic | !(bullet | enumerator) ~ inline))))* ~ endline? }
+continued_list_block = _{ 
+  (&space{2,} | !(bullet | enumerator)) ~
+  (!end_list ~ PEEK_ALL ~ section_contents ~ blank_line*)+
+}
 
-bullet = { ("*" | "-" | "+") ~ space+ }
-bullet_list_item = { !space ~ bullet ~ list_content_start? ~ blank_line* ~ list_content_continuation? }
-bullet_list = ${ PUSH(space*) ~ bullet_list_item ~ (!end_list ~ PEEK_ALL ~ bullet_list_item)* ~ DROP }
-
+bullet = _{ ("*" | "-" | "+") ~ space+ }
 enumerator = { ASCII_DIGIT{1,3} }
-ordered_list_item_number = _{ enumerator ~ ("." | ")") ~ space+ }
-ordered_list_item = { !space ~ ordered_list_item_number ~ list_content_start? ~ blank_line* ~ list_content_continuation? }
-ordered_list = ${ PUSH(space*) ~ ordered_list_item ~ (!end_list ~ PEEK_ALL ~ ordered_list_item)* ~ DROP }
 
-two_star_open = _{ unescaped_asterisk ~ "*" ~ !(space | NEWLINE) }
-two_star_close = _{ !(space | NEWLINE) ~ unescaped_asterisk ~ "*" }
-strong = { (!(NEWLINE | two_star_close) ~ ANY)+ }
-strong_markup = _{ two_star_open ~ strong ~ two_star_close }
+list_item = {
+  (bullet | enumerator) ~
+  inline_list_block ~
+  (blank_line* ~ continued_list_block)*
+}
 
-one_star_open = _{ unescaped_asterisk ~ !(space | NEWLINE) }
-one_star_close = _{ !(space | NEWLINE) ~ unescaped_asterisk }
-italic = { (!(NEWLINE | one_star_close) ~ ANY)+ }
-italic_markup = _{ one_star_open ~ italic ~ one_star_close }
+list_item_tight = {
+  (bullet | enumerator) ~
+  inline_list_block ~
+  (continued_list_block)*
+}
 
-two_tilde_open = _{ unescaped_tilde ~ "~" ~ !(space | NEWLINE) }
-two_tilde_close = _{ !(space | NEWLINE) ~ unescaped_tilde ~ "~" }
-strikethrough = { (!(NEWLINE | two_tilde_close) ~ ANY)+ }
-strikethrough_markup = _{ two_tilde_open ~ strikethrough ~ two_tilde_close }
+list_tight = { 
+  PUSH(space*) ~ 
+  list_item_tight ~ 
+  (PEEK_ALL ~ list_item_tight)* ~
+  blank_line* ~ !(bullet | enumerator) ~
+  DROP
+}
+list_loose = {
+  PUSH(space*) ~
+  list_item ~ 
+  (blank_line* ~ PEEK_ALL ~ list_item) ~
+  DROP
+}
 
-one_backtick_open = _{ unescaped_backtick ~ !(space | NEWLINE) }
-one_backtick_close = _{ !(space | NEWLINE) ~ unescaped_backtick }
-inline_code = { (!( NEWLINE | one_backtick_close) ~ ANY)+ }
-inline_code_markup = _{ one_backtick_open ~ inline_code ~ one_backtick_close }
+bullet_list = { &space* ~ &bullet ~ (list_tight | list_loose)}
+ordered_list = {&space* ~ &enumerator ~ (list_tight | list_loose)}
 
-one_underscore_open = _{ unescaped_underscore ~ !(space | NEWLINE) }
-one_underscore_close = _{ !(space | NEWLINE) ~ unescaped_underscore }
-underline = { (!(NEWLINE | one_underscore_close) ~ ANY)+ }
-underline_markup = _{ one_underscore_open ~ underline ~ one_underscore_close }
+underline_strong = _{ "__" ~ !space ~ (!"__" ~ inline)+ ~ "__" }
+star_strong = _{ "**" ~ !space ~ (!"**" ~ inline)+ ~ "**" }
+strong = { star_strong | underline_strong }
 
-directed_link = { "[" ~ alt_text ~ "](" ~ url ~ ")" }
-autolink = { "<" ~ url ~ ">" }
-link = _{ directed_link | autolink }
+italic = _{ star_emphasis | underline_emphasis }
+star_emphasis = _{ "*" ~ !space ~ ((!"*" ~ inline) | star_strong)+ ~ "*" }
+underline_emphasis = { "_" ~ !space ~ ((!"_" ~ inline) | underline_strong)+ ~ "_" }
 
-image = { space* ~ "![" ~ alt_text ~ "](" ~ url ~ ")" }
+// I don't like having to break all these out, but it is helpful to assert that there are exactly n many ticks
+// in a row as a dedicated rule.
+single_tick = _{ "`" ~ !"`"}
+two_ticks =   _{ single_tick{2} ~ !single_tick }
+three_ticks = _{ single_tick{3} ~ !single_tick }
+four_ticks =  _{ single_tick{4} ~ !single_tick }
+five_ticks =  _{ single_tick{5} ~ single_tick}
+code = { 
+    single_tick ~ space? ~ ((!"`" ~ non_space)+ | !single_tick ~ "`"+ | !(space ~ single_tick) ~ (space | NEWLINE ~ !blank_line))+ ~ space? ~ single_tick
+  | two_ticks   ~ space? ~ ((!"`" ~ non_space)+ | !two_ticks   ~ "`"+ | !(space ~ two_ticks)   ~ (space | NEWLINE ~ !blank_line))+ ~ space? ~ two_ticks
+  | three_ticks ~ space? ~ ((!"`" ~ non_space)+ | !three_ticks ~ "`"+ | !(space ~ three_ticks) ~ (space | NEWLINE ~ !blank_line))+ ~ space? ~ three_ticks 
+  | four_ticks  ~ space? ~ ((!"`" ~ non_space)+ | !four_ticks  ~ "`"+ | !(space ~ four_ticks)  ~ (space | NEWLINE ~ !blank_line))+ ~ space? ~ four_ticks 
+  | five_ticks  ~ space? ~ ((!"`" ~ non_space)+ | !five_ticks  ~ "`"+ | !(space ~ five_ticks)  ~ (space | NEWLINE ~ !blank_line))+ ~ space? ~ five_ticks
+}
+
+reference_source = { non_space+ }
+reference_title = { 
+    single_quote ~ (!(single_quote ~ space* ~ NEWLINE) ~ ANY)* ~ single_quote
+  | double_quote ~ (!(double_quote ~ space* ~ NEWLINE) ~ ANY)* ~ double_quote
+}
+
+reference = { non_indent_space ~ !"[]" ~ "[" ~ label ~ "]:" ~ (space | NEWLINE ~ space) ~ reference_source ~ reference_title? }
+
+shortcut_reference_link = { "[" ~ label ~ "]" ~ "[]"? }
+full_reference_link = { "[" ~ label ~ "]" ~ !"[]" ~ "[" ~ label ~ "]" }
+reference_link = _{ full_reference_link | shortcut_reference_link }
+
+directed_link = { "[" ~ label ~ "](" ~ source ~ ")" }
+autolink = { "<" ~ source ~ ">" }
+link = { directed_link | reference_link | autolink }
+
+image = { "!" ~ directed_link }
