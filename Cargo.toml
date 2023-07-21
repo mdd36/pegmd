@@ -1,6 +1,6 @@
 [package]
 name = "pegmd"
-version = "0.1.0"
+version = "0.2.0"
 authors = [ "Matthew Dickson <hi@mattdickson.io>" ]
 edition = "2021"
 description = "A PEG based markdown parser for creating an Abstract Syntax Tree"
@@ -9,6 +9,7 @@ repository = "https://github.com/mdd36/pegmd"
 license = "MIT"
 categories = [ "parser-implementations" ]
 keywords = [ "markdown", "peg" ]
+exclude = [ "test_data" ]
 
 [dependencies]
 pest = "2.7"
@@ -16,3 +17,8 @@ pest_derive = "2.7"
 
 [dev-dependencies]
 indoc = "2"
+
+
+[features]
+default = []
+html = []

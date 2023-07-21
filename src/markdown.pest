@@ -5,6 +5,7 @@ section_contents = _{ verbatim | reference | header | bullet_list | ordered_list
 COMMENT = _{ ("[//]: # (" ~ ("\\)" | (!")" ~ ANY))* ~ ")") | "<!--" ~ (!"-->" ~ ANY)+ ~ "-->" }
 
 space = { " " | "\t" }
+silent_space = _{ " " }
 
 blank_line = _{ space* ~ NEWLINE }
 indent = _{ " "{4} | "\t" }
@@ -20,7 +21,7 @@ escaped_special_char = { "\\" ~ ("-" | "\\" | "`" | "|" | "*" | "#" | "+" | "." 
 
 unescaped_backtick = _{ !"\\" ~ "`" }
 
-markup = _{ strong | italic | code | image | link }
+markup = _{ strong | emphasis | code | image | link }
 str = { normal_char+ ~ (normal_char | "_"+ ~ &normal_char)* }
 symbol = { special_char }
 
@@ -49,14 +50,21 @@ codeblock = { codeblock_open ~ space* ~ codeblock_lang ~ space* ~ NEWLINE ~ code
 
 end_list = { space* ~ COMMENT }
 
-inline_list_block = _{ (!blank_line ~ (inline | (NEWLINE ~ PEEK_ALL ~ space{0,1} ~ (strong | italic | !(bullet | enumerator) ~ inline))))* ~ endline? }
-continued_list_block = _{ 
-  (&space{2,} | !(bullet | enumerator)) ~
-  (!end_list ~ PEEK_ALL ~ section_contents ~ blank_line*)+
+inline_list_block = _{ 
+  (!blank_line ~ (
+    inline | 
+    (NEWLINE ~ PEEK_ALL ~ silent_space{0,1} ~ (&strong | &emphasis | !(bullet | enumerator)) ~ inline)
+  ))* 
+  ~ endline? }
+continued_list_block = _{
+  blank_line* ~ // Allow a blank line before the continuation block
+  PEEK_ALL ~ !end_list ~ // Match the indent level AND confirm there's no hard break for the list (only needed for a root, non-indented list)
+  (&silent_space{2,} | &strong | &emphasis | !(bullet | enumerator)) ~ // We've either indended more OR the row doesn't start with a bullet. Checking for emph and strong first since they start with a bullet but should be allowed
+  (section_contents) // Match a single section
 }
 
-bullet = _{ ("*" | "-" | "+") ~ space+ }
-enumerator = { ASCII_DIGIT{1,3} }
+bullet = _{ ("*" | "-" | "+") ~ silent_space+ }
+enumerator = { ASCII_DIGIT{1,3} ~ (")"| ".") ~ silent_space+ }
 
 list_item = {
   (bullet | enumerator) ~
@@ -71,29 +79,29 @@ list_item_tight = {
 }
 
 list_tight = { 
-  PUSH(space*) ~ 
+  PUSH(silent_space*) ~ 
   list_item_tight ~ 
-  (PEEK_ALL ~ list_item_tight)* ~
-  blank_line* ~ !(bullet | enumerator) ~
+  (!blank_line ~ PEEK_ALL ~ list_item_tight)* ~
+  !(blank_line+ ~ PEEK_ALL ~ (bullet | enumerator)) ~
   DROP
 }
 list_loose = {
-  PUSH(space*) ~
+  PUSH(silent_space*) ~
   list_item ~ 
-  (blank_line* ~ PEEK_ALL ~ list_item) ~
+  (blank_line* ~ PEEK_ALL ~ list_item)* ~
   DROP
 }
 
-bullet_list = { &space* ~ &bullet ~ (list_tight | list_loose)}
-ordered_list = {&space* ~ &enumerator ~ (list_tight | list_loose)}
+bullet_list = { &(silent_space* ~ bullet) ~ (list_tight | list_loose)}
+ordered_list = { &(silent_space* ~ enumerator) ~ (list_tight | list_loose)}
 
 underline_strong = _{ "__" ~ !space ~ (!"__" ~ inline)+ ~ "__" }
 star_strong = _{ "**" ~ !space ~ (!"**" ~ inline)+ ~ "**" }
 strong = { star_strong | underline_strong }
 
-italic = _{ star_emphasis | underline_emphasis }
 star_emphasis = _{ "*" ~ !space ~ ((!"*" ~ inline) | star_strong)+ ~ "*" }
-underline_emphasis = { "_" ~ !space ~ ((!"_" ~ inline) | underline_strong)+ ~ "_" }
+underline_emphasis = _{ "_" ~ !space ~ ((!"_" ~ inline) | underline_strong)+ ~ "_" }
+emphasis = { star_emphasis | underline_emphasis }
 
 // I don't like having to break all these out, but it is helpful to assert that there are exactly n many ticks
 // in a row as a dedicated rule.
