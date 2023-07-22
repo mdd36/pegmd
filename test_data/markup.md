@@ -6,4 +6,4 @@
 `print("hello world!")`
 *some **bold and emphasized** text*
 **[to boldly go](https://en.wikipedia.org/wiki/Where_no_man_has_gone_before)**
-*`echo 'hello world`*
+*`echo 'hello world'`*

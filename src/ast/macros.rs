@@ -13,7 +13,7 @@
 #[macro_export]
 macro_rules! first_child {
   ($value: expr) => {
-      $value.into_inner()
+      $value
           .next()
           .ok_or(ParseError::SyntaxError(format!("Missing required child in expression")))
   };
@@ -33,64 +33,81 @@ macro_rules! container_type {
   ($name:ident) => {
       #[derive(std::fmt::Debug, PartialEq)]
       pub struct $name<'input> {
-          children: Vec<Node<'input>>
+          children: Children<'input>, 
+          span: &'input str,
       }
 
       impl <'input> TryFrom<Pair<'input, Rule>> for $name<'input> {
           type Error = ParseError;
 
           fn try_from(value: Pair<'input, Rule>) -> Result<Self, Self::Error> {
-                let children: Result<Vec<Node>, ParseError> = value.into_inner()
-                    .map(|child| Node::try_from(child))
-                    .collect();
-              Ok (Self { children: children? })
+            let span = value.as_str();
+            let children = Children::try_from(value)?;
+            Ok (Self { span, children })
           }
-      }
-
-      impl <'input> AsRef<Vec<Node<'input>>> for $name<'input> {
-        fn as_ref(&self) -> &Vec<Node<'input>> {
-            &self.children
-        }
       }
 
       impl <'input> $name<'input> {
         #[allow(dead_code)]
-          pub fn new(children: Vec<Node<'input>> ) -> Self {
+          pub fn new(children: Children<'input>, span: &'input str) -> Self {
             Self {
               children,
+              span,
             }
+          }
+
+          pub fn children(&self) -> &Children {
+            &self.children
+          }
+
+          pub fn children_mut(&'input mut self) -> &mut Children {
+            &mut self.children
+          }
+
+          pub fn as_span(&self) -> &str {
+            self.span
           }
       }
   };
 
-  ($name: ident $(, ($field_name: ident, $ty: ty))+) => {
-      #[derive(std::fmt::Debug, PartialEq)]
-      pub struct $name<'input> {
-          children: Vec<Node<'input>>,
-          $($field_name: $ty,)+
-      }
-
-      impl <'input> AsRef<Vec<Node<'input>>> for $name<'input> {
-        fn as_ref(&self) -> &Vec<Node<'input>> {
-            &self.children
+    ($name: ident $(, ($field_name: ident, $ty: ty))+) => {
+        #[derive(std::fmt::Debug, PartialEq)]
+        pub struct $name<'input> {
+            children: Children<'input>,
+            span: &'input str,
+            $($field_name: $ty,)+
         }
-      }
 
-      impl <'input> $name<'input> {
+        impl <'input> $name<'input> {
 
-          #[allow(dead_code)]
-          pub fn new(children: Vec<Node<'input>> $(, $field_name: $ty)+) -> Self {
-            Self {
-              children,
-              $($field_name,)+
+            #[allow(dead_code)]
+            pub fn new(
+                children: Children<'input>,
+                span: &'input str
+                $(, $field_name: $ty)+
+            ) -> Self {
+                Self {
+                    children,
+                    span,
+                    $($field_name,)+
+                }
             }
-          }
 
-          $(
-              pub fn $field_name(&self) -> $ty {
-                  self.$field_name
+            pub fn as_span(&self) -> &str {
+                self.span
+            }
+
+            pub fn children(&self) -> &Children {
+                &self.children
               }
-          )+
+
+              pub fn children_mut(&'input mut self) -> &mut Children {
+                &mut self.children
+              }
+
+            $(pub fn $field_name(&self) -> $ty {
+                self.$field_name
+            })+
       }
   };
 }

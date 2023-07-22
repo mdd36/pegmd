@@ -225,11 +225,11 @@ impl Visitor for HTMLRenderer {
           Node::CodeBlock(_) => self.codeblock(action),
           Node::Emphasis(_) => self.inline_style("<emp>", "</emp>", action),
           Node::Strong(_) => self.inline_style("<strong>", "</strong>", action),
+          Node::Code(_) => self.inline_style("<pre><code>", "</code></pre>", action),
           Node::Link(link) => self.link(link, action),
           Node::Image(img) => self.image(img),
           Node::Text(text) => write!(self.output.borrow_mut(), "{}", text.as_ref()),
           Node::Linebreak(_) => self.linebreak(),
-          Node::Code(text) => write!(self.output.borrow_mut(), "<pre><code>{}</code></pre>", text.as_ref()),
           Node::Label(_) => return NextAction::GotoNext,
           Node::EOI => Ok(())
         };

@@ -1,4 +1,4 @@
-document = _{ SOI ~ section* ~ EOI }
+document = { SOI ~ section* ~ EOI }
 section = _{ blank_line* ~ section_contents ~ blank_line* }
 section_contents = _{ verbatim | reference | header | bullet_list | ordered_list | paragraph | codeblock }
 
@@ -16,7 +16,7 @@ single_quote = _{ "'" }
 
 special_char = _{ "~" | "*" | "_" | "`" | "&" | "[" | "]" | "(" | ")" | "<" | "!" | "#" | "\\" | "\"" }
 normal_char = _{ !special_char ~ !NEWLINE ~ !space ~ ANY }
-non_space = _{ !NEWLINE ~ !space ~ ANY }
+non_space = { !NEWLINE ~ !space ~ ANY }
 escaped_special_char = { "\\" ~ ("-" | "\\" | "`" | "|" | "*" | "#" | "+" | "." | "!" | "_" | "{" | "}" | "[" | "]" | "(" | ")" | "<" |">")} 
 
 unescaped_backtick = _{ !"\\" ~ "`" }
@@ -30,7 +30,7 @@ trailing_endline = _{ space* ~ NEWLINE ~ EOI }
 linebreak = { "  " ~ normal_endline }
 endline = _{ normal_endline | trailing_endline | linebreak }
 
-inline = _{ str | endline  | space | markup | escaped_special_char | symbol }
+inline = _{ str | endline  | space | escaped_special_char | markup | symbol }
 inlines = _{ ((!endline ~ inline) | (endline ~ &inline))+ ~ endline? }
 
 label = { (!"]" ~ !NEWLINE ~ inline)* }
@@ -99,8 +99,8 @@ underline_strong = _{ "__" ~ !space ~ (!"__" ~ inline)+ ~ "__" }
 star_strong = _{ "**" ~ !space ~ (!"**" ~ inline)+ ~ "**" }
 strong = { star_strong | underline_strong }
 
-star_emphasis = _{ "*" ~ !space ~ ((!"*" ~ inline) | star_strong)+ ~ "*" }
-underline_emphasis = _{ "_" ~ !space ~ ((!"_" ~ inline) | underline_strong)+ ~ "_" }
+star_emphasis = _{ "*" ~ !space ~ ((!"*" ~ inline) | strong)+ ~ "*" }
+underline_emphasis = _{ "_" ~ !space ~ ((!"_" ~ inline) | strong)+ ~ "_" }
 emphasis = { star_emphasis | underline_emphasis }
 
 // I don't like having to break all these out, but it is helpful to assert that there are exactly n many ticks
@@ -134,4 +134,4 @@ directed_link = { "[" ~ label ~ "](" ~ source ~ ")" }
 autolink = { "<" ~ source ~ ">" }
 link = { directed_link | reference_link | autolink }
 
-image = { "!" ~ directed_link }
+image = { !"\\" ~ "!" ~ directed_link }

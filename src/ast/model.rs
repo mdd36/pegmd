@@ -2,22 +2,102 @@ use pest::iterators::Pair;
 
 use crate::{container_type, leaf_type, parser::Rule, error::ParseError, first_child};
 
-/// A NodeType wraps containers and leafs into a single type so that other
-/// components can differentiate their behavior based on the whether the
-/// node is a leaf, a container, or the end of the input. EOI could arguably 
-/// be a leaf, but for greater explicitly it's modeled separately.
-/// 
-/// ### Lifetime Parameters
-/// 
-/// * `'input` - The lifetime is constrained to the lifetime of the input to the parser
-///              since leaf nodes contain a string slice from the original input.
-pub enum NodeType<'input> {
-    Leaf,
-    Container(&'input Vec<Node<'input>>),
-    EOI,
+/// A newtype wrapper over a Vec<Node>, largely so that we can implement conversion traits
+/// between a [`Pair`] and a Vec. This type implements [`std::ops::Deref`] to its wrapped
+/// vector to improve developer ergonomics.
+#[derive(PartialEq)]
+pub struct Children<'input>(Vec<Node<'input>>);
+
+impl <'input> TryFrom<Pair<'input, Rule>> for Children<'input> {
+    type Error = ParseError;
+
+    /// This method is a little gross, but it handles coalescing adjacent plaintext parser tokens
+    /// into a single [`Node::Text`], as a naïve implementation would produce a single text node 
+    /// for every word, space, special character, and escaped control character. By collapsing them
+    /// into a single Node, we reduce the memory footprint of the final AST and make it easier 
+    /// for traversal implementations to reason about the nodes in the tree.
+    fn try_from(value: Pair<'input, Rule>) -> Result<Self, Self::Error> {
+        let span = value.as_str();
+        let span_start = value.as_span().start();
+
+        // Represents the sliding window over the &str that only contains plaintext.
+        let mut running_segment_start = span_start;
+        let mut running_segment_end = span_start;
+
+        let mut children = Vec::new();
+
+        for child in value.into_inner() {
+            let child_start = child.as_span().start();
+            let child_end = child.as_span().end();
+
+            if child.as_rule().is_plaintext() {
+                // If the child's start is after the running segment's end, then 
+                // the child is the start of a new run so we need to update the
+                // start pos of the running segment.
+                if child_start > running_segment_end {
+                    running_segment_start = child_start;
+                }
+                // Always update the end since we always want to have the running 
+                // segment include this span
+                running_segment_end = child_end;
+
+                // Skip! Will add the running segment later when we hit a non-
+                // plaintext node.
+                continue;
+            }
+
+            // Not plaintext, so we immediately convert the child into a node.
+            let node = Node::try_from(child)?;
+
+            // If theses aren't equal, then we have plaintext to add.
+            if running_segment_start != running_segment_end {
+                // Convert from absolute position in the input to the absolute position within the span
+                let start_index = running_segment_start - span_start;
+                let end_index = start_index + (running_segment_end - running_segment_start);
+                children.push(Node::Text(Text { literal: &span[start_index..end_index] }));
+            }
+
+            // Now, we can push the non-plaintext node that came after the stretch of plaintext.
+            children.push(node);
+
+            // And reset the running segment
+            running_segment_start = child_end;
+            running_segment_end = child_end;
+        }
+
+        // Last check in case the final segment of the span was plaintext.
+        if running_segment_start != running_segment_end {
+            // Convert from absolute position in the input to the absolute position within the span
+            let start_index = running_segment_start - span_start; 
+            let end_index = start_index + (running_segment_end - running_segment_start);
+            children.push(Node::Text(Text { literal: &span[start_index..end_index] }));
+        }
+
+        Ok(Children(children))
+
+    }
 }
 
-/// A union type over all the different nodes. Each variant contains the struct representation
+impl <'input> std::ops::Deref for Children<'input> {
+    type Target = Vec<Node<'input>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl <'input> std::ops::DerefMut for Children<'input> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl <'input> std::fmt::Debug for Children<'input> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_list().entries(self.iter()).finish()
+    }
+}
+
 /// for that type, except for EOI since EOI contains nothing by definition.
 /// 
 /// ### Lifetime Parameters
@@ -48,24 +128,66 @@ pub enum Node<'input> {
 }
 
 impl <'input> Node<'input> {
-    pub fn inner(&'input self) -> NodeType<'input> {
+    pub fn children(&self) -> Option<&Children> {
         match self {
-            Self::Document(c) => NodeType::Container(c.as_ref()),
-            Self::Paragraph(p) => NodeType::Container(p.as_ref()), 
-            Self::BlockQuote(bq) => NodeType::Container(bq.as_ref()),
-            Self::Heading(h) => NodeType::Container(h.as_ref()),
-            Self::List(l) => NodeType::Container(l.as_ref()),
-            Self::ListItem(li) => NodeType::Container(li.as_ref()),
-            Self::CodeBlock(cb) => NodeType::Container(cb.as_ref()),
-            Self::Emphasis(emp) => NodeType::Container(emp.as_ref()),
-            Self::Strong(strong) => NodeType::Container(strong.as_ref()),
-            Self::Label(l) => NodeType::Container(l.as_ref()),
-            Self::Link(l) => NodeType::Container(l.as_ref()),
-            Self::Image(_) => NodeType::Leaf,
-            Self::Text(_) => NodeType::Leaf,
-            Self::Linebreak(_) => NodeType::Leaf,
-            Self::Code(_) => NodeType::Leaf,
-            Self::EOI => NodeType::EOI,
+            Self::Document(c) => Some(c.children()),
+            Self::Paragraph(p) => Some(p.children()), 
+            Self::BlockQuote(bq) => Some(bq.children()), 
+            Self::Heading(h) => Some(h.children()), 
+            Self::List(l) => Some(l.children()), 
+            Self::ListItem(li) => Some(li.children()), 
+            Self::CodeBlock(cb) => Some(cb.children()), 
+            Self::Emphasis(emp) => Some(emp.children()), 
+            Self::Strong(strong) => Some(strong.children()), 
+            Self::Label(l) => Some(l.children()), 
+            Self::Link(l) => Some(l.children()),
+            Self::Code(c) => Some(c.children()),
+            Self::Image(_) => None,
+            Self::Text(_) => None,
+            Self::Linebreak(_) => None,
+            Self::EOI => None,
+        }
+    }
+
+    pub fn children_mut(&'input mut self) -> Option<&mut Children> {
+        match self {
+            Self::Document(c) => Some(c.children_mut()),
+            Self::Paragraph(p) => Some(p.children_mut()),
+            Self::BlockQuote(bq) => Some(bq.children_mut()),
+            Self::Heading(h) => Some(h.children_mut()), 
+            Self::List(l) => Some(l.children_mut()),
+            Self::ListItem(li) => Some(li.children_mut()),
+            Self::CodeBlock(cb) => Some(cb.children_mut()),
+            Self::Emphasis(emp) => Some(emp.children_mut()),
+            Self::Strong(strong) => Some(strong.children_mut()),
+            Self::Label(l) => Some(l.children_mut()),
+            Self::Link(l) => Some(l.children_mut()),
+            Self::Code(c) => Some(c.children_mut()),
+            Self::Image(_) => None,
+            Self::Text(_) => None,
+            Self::Linebreak(_) => None,
+            Self::EOI => None,
+        }
+    }
+
+    pub fn as_span(&self) -> &str {
+        match self {
+            Self::Document(c) => c.as_span(),
+            Self::Paragraph(p) => p.as_span(), 
+            Self::BlockQuote(bq) => bq.as_span(),
+            Self::Heading(h) => h.as_span(),
+            Self::List(l) => l.as_span(),
+            Self::ListItem(li) => li.as_span(),
+            Self::CodeBlock(cb) => cb.as_span(),
+            Self::Emphasis(emp) => emp.as_span(),
+            Self::Strong(strong) => strong.as_span(),
+            Self::Label(l) => l.as_span(),
+            Self::Link(l) => l.as_span(),
+            Self::Code(c) => c.as_span(),
+            Self::Image(img) => img.as_ref(),
+            Self::Text(txt) => txt.as_ref(),
+            Self::Linebreak(lb) => lb.as_ref(),
+            Self::EOI => "EOI",
         }
     }
 }
@@ -79,7 +201,7 @@ impl <'input> TryFrom<Pair<'input, Rule>> for Node<'input> {
 
         match value.as_rule() {
             // Container nodes
-            Rule::document => Ok(Node::Paragraph(Paragraph::try_from(value)?)),
+            Rule::document => Ok(Node::Document(Document::try_from(value)?)),
             Rule::paragraph => Ok(Node::Paragraph(Paragraph::try_from(value)?)),
             Rule::verbatim => Ok(Node::BlockQuote(BlockQuote::try_from(value)?)),
             Rule::header=> Ok(Node::Heading(Heading::try_from(value)?)),
@@ -89,12 +211,13 @@ impl <'input> TryFrom<Pair<'input, Rule>> for Node<'input> {
             Rule::emphasis => Ok(Node::Emphasis(Emphasis::try_from(value)?)),
             Rule::strong => Ok(Node::Strong(Strong::try_from(value)?)),
             Rule::label => Ok(Node::Label(Label::try_from(value)?)),
-            Rule::link => Ok(Node::Link(Link::try_from(first_child!(value)?)?)),
-            Rule::image => Ok(Node::Image(Image::try_from(first_child!(value)?)?)),
+            Rule::link => Ok(Node::Link(Link::try_from(first_child!(value.into_inner())?)?)),
+            Rule::image => Ok(Node::Image(Image::try_from(first_child!(value.into_inner())?)?)),
+            Rule::code => Ok(Node::Code(Code::try_from(value)?)),
             // Leaf nodes
-            Rule::str | Rule::space | Rule::symbol | Rule::escaped_special_char => Ok(Node::Text(Text::from(value))),
+            Rule::str | Rule::space | Rule::symbol | 
+            Rule::escaped_special_char | Rule::source => Ok(Node::Text(Text::from(value))),
             Rule::linebreak => Ok(Node::Linebreak(Linebreak::from(value))),
-            Rule::code => Ok(Node::Code(Code::from(value))),
             // End of input
             Rule::EOI => Ok(Node::EOI),
             // Error
@@ -115,12 +238,12 @@ container_type!(CodeBlock);
 container_type!(Emphasis);
 container_type!(Strong);
 container_type!(Label);
+container_type!(Code);
 container_type!(List, (tight, bool), (ordered, bool));
 container_type!(Heading, (level, u8));
 container_type!(Link, (source, &'input str));
 leaf_type!(Text);
 leaf_type!(Linebreak);
-leaf_type!(Code);
 leaf_type!(Image, (source, &'input str));
 
 // -----------------------------------------------------------------------
@@ -133,31 +256,29 @@ impl <'input> TryFrom<Pair<'input, Rule>> for List<'input> {
   type Error = ParseError;
 
   fn try_from(value: Pair<'input, Rule>) -> Result<Self, Self::Error> {
-      let list_as_str = value.as_str();
       let location = value.line_col();
+      let span: &str = value.as_str();
 
       let ordered = match value.as_rule() {
           Rule::bullet_list => false,
           Rule::ordered_list => true,
           ty => return Err(ParseError::SyntaxError(
-              format!(r#"Expected a list node for "{list_as_str}", but got {ty:?}. Error occurred at {location:?}"#)
+              format!(r#"Expected a list node for "{span}", but got {ty:?}. Error occurred at {location:?}"#)
           ))
       };
 
-      let list = first_child!(value)?;
+      let list = first_child!(value.into_inner())?;
       let tight = match list.as_rule() {
           Rule::list_tight => true,
           Rule::list_loose => false,
           ty => return Err(ParseError::SyntaxError(
-              format!(r#"Expected a list node for "{list_as_str}", but got {ty:?}. Error occurred at {location:?}"#)
+              format!(r#"Expected a list node for "{span}", but got {ty:?}. Error occurred at {location:?}"#)
           ))
       };
 
-      let list_items: Result<Vec<Node<'input>>, ParseError> = list.into_inner()
-        .map(Node::try_from)
-        .collect();
+      let children = Children::try_from(list)?;
 
-      Ok( Self { children: list_items?, tight, ordered } )
+      Ok( Self { children, span, tight, ordered } )
   }
 }
 
@@ -167,18 +288,18 @@ impl <'input> TryFrom<Pair<'input, Rule>> for Heading<'input> {
 
   fn try_from(value: Pair<'input, Rule>) -> Result<Self, Self::Error> {
       let location = value.line_col();
-      let header_as_str = value.as_str();
+      let span = value.as_str();
 
       let mut children = value.into_inner();
       let hashes = children.next()
-          .ok_or(ParseError::SyntaxError(format!(r#"No header markers found in "{header_as_str}". Error occurred at: {location:?}"#)))?;
+          .ok_or(ParseError::SyntaxError(format!(r#"No header markers found in "{span}". Error occurred at: {location:?}"#)))?;
       let title = children.next()
-          .ok_or(ParseError::SyntaxError(format!(r#"No title found in "{header_as_str}". Error occurred at: {location:?}"#)))?;
+          .ok_or(ParseError::SyntaxError(format!(r#"No title found in "{span}". Error occurred at: {location:?}"#)))?;
       
       let level = hashes.as_str().len() as u8;
-      let children = vec![Node::try_from(title)?];
+      let children = Children::try_from(title)?;
       
-      Ok(Self { children, level })
+      Ok(Self { children, span, level })
   }
 
 }
@@ -188,33 +309,28 @@ impl <'input> TryFrom<Pair<'input, Rule>> for Link<'input> {
 
   fn try_from(value: Pair<'input, Rule>) -> Result<Self, Self::Error> {
       let location = value.line_col();
-      let link_as_str = value.as_str();
-      let link_type = value.as_rule();
-      let mut children = value.into_inner();
+      let span = value.as_str();
 
-      let (label, source) = match link_type {
-          Rule::directed_link | Rule::full_reference_link | Rule::shortcut_reference_link => {
-              let label = children.next()
-                  .ok_or(ParseError::SyntaxError(format!(r#"No label node found in "{link_as_str}". Error occurred at: {location:?}"#)))?
-                  .try_into()?;
-              let source = children.next()
-                  .ok_or(ParseError::SyntaxError(format!(r#"No source found for link in "{link_as_str}". Error occurred at: {location:?}"#)))?
-                  .as_str();
-              (label, source)
-          }
-          Rule::autolink => {
-              let source = children.next()
-                  .ok_or(ParseError::SyntaxError(format!(r#"No source found for link in "{link_as_str}". Error occurred at: {location:?}"#)))?;
-              let source_str = source.as_str();
-              (source.try_into()?, source_str)
-          }
-          ty => return Err(ParseError::SyntaxError(
-              format!(r#"Expected source "{link_as_str}" to be a link type, but was {ty:?}. Error occurred at: {location:?}"#)
-          ))
+      let mut inner_nodes = value.into_inner();
+
+      // All links have labels. Autolinks are a special case where their label
+      // is the same as their source.
+      let label_node = inner_nodes.next()
+        .ok_or(ParseError::SyntaxError(format!(r#"No label node found in "{span}". Error occurred at: {location:?}"#)))?;
+
+      // If this is an autolink, there's no more children and so hence the source
+      // is the text value of the label node. If this is a directed link or reference,
+      // then the next node is the actual destination.
+      let source = match inner_nodes.next() {
+        Some(node) => node.as_str(),
+        None => label_node.as_str()
       };
 
-      Ok( Self { children: vec![ label ], source } )
-      
+      // Now we can do this since we've extracted the source as a str in the case where
+      // the link is an autolink.
+      let children = Children::try_from(label_node)?;
+
+      Ok( Self { children, span, source } )
   }
 } 
 
