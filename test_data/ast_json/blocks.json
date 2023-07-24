@@ -1,0 +1,234 @@
+{
+  "Document": {
+    "children": [
+      {
+        "Heading": {
+          "children": [
+            {
+              "Text": {
+                "literal": "Some blocks"
+              }
+            }
+          ],
+          "level": 1
+        }
+      },
+      {
+        "Paragraph": {
+          "children": [
+            {
+              "Text": {
+                "literal": "This is a paragraph"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "Paragraph": {
+          "children": [
+            {
+              "Text": {
+                "literal": "This paragraph is interrupted by"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "BlockQuote": {
+          "children": [
+            {
+              "Text": {
+                "literal": "A verbatim block"
+              }
+            },
+            {
+              "SoftLinebreak": {
+                "literal": "\n"
+              }
+            },
+            {
+              "Text": {
+                "literal": "That continues"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "BlockQuote": {
+          "children": [
+            {
+              "Text": {
+                "literal": "But this one is new"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "CodeBlock": {
+          "children": [
+            {
+              "Text": {
+                "literal": "this is an indented codeblock"
+              }
+            },
+            {
+              "Linebreak": {
+                "literal": "\n"
+              }
+            },
+            {
+              "Text": {
+                "literal": "it continues"
+              }
+            },
+            {
+              "Linebreak": {
+                "literal": "\n"
+              }
+            },
+            {
+              "Linebreak": {
+                "literal": "\n"
+              }
+            },
+            {
+              "Text": {
+                "literal": "over blank lines"
+              }
+            }
+          ],
+          "language": null
+        }
+      },
+      {
+        "CodeBlock": {
+          "children": [
+            {
+              "Text": {
+                "literal": "print(\"Hello world!\")"
+              }
+            },
+            {
+              "Linebreak": {
+                "literal": "\n"
+              }
+            },
+            {
+              "Linebreak": {
+                "literal": "\n"
+              }
+            },
+            {
+              "Text": {
+                "literal": "for x in range(1, 10):"
+              }
+            },
+            {
+              "Linebreak": {
+                "literal": "\n"
+              }
+            },
+            {
+              "Text": {
+                "literal": "    print(\"even\" if x % 2 == 0 else \"odd\")"
+              }
+            }
+          ],
+          "language": "python"
+        }
+      },
+      {
+        "Heading": {
+          "children": [
+            {
+              "Text": {
+                "literal": "Some other blocks"
+              }
+            }
+          ],
+          "level": 3
+        }
+      },
+      {
+        "List": {
+          "children": [
+            {
+              "ListItem": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "A basic list"
+                    }
+                  }
+                ],
+                "index": 1
+              }
+            },
+            {
+              "ListItem": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "Pretty simple"
+                    }
+                  }
+                ],
+                "index": 1
+              }
+            }
+          ],
+          "tight": false,
+          "ordered": false,
+          "start": 1
+        }
+      },
+      {
+        "List": {
+          "children": [
+            {
+              "ListItem": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "This is a separate list"
+                    }
+                  }
+                ],
+                "index": 1
+              }
+            }
+          ],
+          "tight": true,
+          "ordered": false,
+          "start": 1
+        }
+      },
+      {
+        "List": {
+          "children": [
+            {
+              "ListItem": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "This one is ordered"
+                    }
+                  }
+                ],
+                "index": 1
+              }
+            }
+          ],
+          "tight": true,
+          "ordered": true,
+          "start": 1
+        }
+      },
+      "EOI"
+    ]
+  }
+}

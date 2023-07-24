@@ -19,12 +19,12 @@ If the `html` feature is enabled, the crate provides the `html::HTMLTransformer`
 ## Current Limitations
 While the end goal for the parser is to support the entire CommonMark spec, it currently doesn't support:
 
-- HTML blocks
-- Horizontal rules
-- Setext headings
-- Entity references
-- Indented code blocks. You must use fenced code blocks instead
-- Fenced code blocks can only be opened with a backtick (`), not a tilde (~)
-- Lists can't interrupt paragraphs
+- [HTML blocks](https://spec.commonmark.org/0.30/#html-blocks)
+- [Setext headings](https://spec.commonmark.org/0.30/#setext-headings)
+- [ATX headings with closing hashes](https://spec.commonmark.org/0.30/#example-71)
+- [Entity references](https://spec.commonmark.org/0.30/#entity-and-numeric-character-references)
+- [Using a tilde (~) to fence a codeblock](https://spec.commonmark.org/0.30/#example-120)
+- Fenced codeblocks without a closing fence run until the end of the document rather than to the [end of the container block](https://spec.commonmark.org/0.30/#example-126)
+- Some of the edge cases for block quotes aren't handled per the spec. Specifically examples [247](https://spec.commonmark.org/0.30/#example-247) through [252](https://spec.commonmark.org/0.30/#example-252) 
 
 All of these are a WIP and will be added to the parser.

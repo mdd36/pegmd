@@ -32,8 +32,10 @@ macro_rules! first_child {
 macro_rules! container_type {
   ($name:ident) => {
       #[derive(std::fmt::Debug, PartialEq)]
+      #[cfg_attr(feature = "serialize", derive(serde::Serialize, serde::Deserialize))]
       pub struct $name<'input> {
-          children: Children<'input>, 
+          children: Children<'input>,
+          #[cfg_attr(feature = "serialize", serde(skip_serializing))]
           span: &'input str,
       }
 
@@ -72,8 +74,10 @@ macro_rules! container_type {
 
     ($name: ident $(, ($field_name: ident, $ty: ty))+) => {
         #[derive(std::fmt::Debug, PartialEq)]
+        #[cfg_attr(feature = "serialize", derive(serde::Serialize, serde::Deserialize))]
         pub struct $name<'input> {
             children: Children<'input>,
+            #[cfg_attr(feature = "serialize", serde(skip_serializing))]
             span: &'input str,
             $($field_name: $ty,)+
         }
@@ -126,6 +130,7 @@ macro_rules! leaf_type {
   ($name: ident) => {
       
         #[derive(std::fmt::Debug, PartialEq)]
+        #[cfg_attr(feature = "serialize", derive(serde::Serialize, serde::Deserialize))]
         pub struct $name<'input> {
             literal: &'input str,
         }
@@ -146,6 +151,7 @@ macro_rules! leaf_type {
   ($name: ident $(, ($field_name: ident, $ty: ty))+) => {
       
       #[derive(std::fmt::Debug, PartialEq)]
+      #[cfg_attr(feature = "serialize", derive(serde::Serialize, serde::Deserialize))]
       pub struct $name<'input> {
           literal: &'input str,
           $($field_name: $ty,)+

@@ -1,0 +1,237 @@
+{
+  "Document": {
+    "children": [
+      {
+        "List": {
+          "children": [
+            {
+              "ListItem": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "Some "
+                    }
+                  },
+                  {
+                    "Emphasis": {
+                      "children": [
+                        {
+                          "Text": {
+                            "literal": "complex list tests"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "index": 1
+              }
+            },
+            {
+              "ListItem": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "This one is loose"
+                    }
+                  },
+                  {
+                    "List": {
+                      "children": [
+                        {
+                          "ListItem": {
+                            "children": [
+                              {
+                                "Text": {
+                                  "literal": "But it has a tight sublist"
+                                }
+                              }
+                            ],
+                            "index": 1
+                          }
+                        }
+                      ],
+                      "tight": true,
+                      "ordered": false,
+                      "start": 1
+                    }
+                  }
+                ],
+                "index": 1
+              }
+            }
+          ],
+          "tight": false,
+          "ordered": false,
+          "start": 1
+        }
+      },
+      {
+        "List": {
+          "children": [
+            {
+              "ListItem": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "This one is ordered"
+                    }
+                  },
+                  {
+                    "SoftLinebreak": {
+                      "literal": "\n"
+                    }
+                  },
+                  {
+                    "List": {
+                      "children": [
+                        {
+                          "ListItem": {
+                            "children": [
+                              {
+                                "Text": {
+                                  "literal": "And its sublist starts at 6"
+                                }
+                              }
+                            ],
+                            "index": 6
+                          }
+                        }
+                      ],
+                      "tight": true,
+                      "ordered": true,
+                      "start": 6
+                    }
+                  },
+                  {
+                    "List": {
+                      "children": [
+                        {
+                          "ListItem": {
+                            "children": [
+                              {
+                                "Text": {
+                                  "literal": "A second list block"
+                                }
+                              }
+                            ],
+                            "index": 1
+                          }
+                        }
+                      ],
+                      "tight": true,
+                      "ordered": false,
+                      "start": 1
+                    }
+                  }
+                ],
+                "index": 1
+              }
+            }
+          ],
+          "tight": true,
+          "ordered": true,
+          "start": 1
+        }
+      },
+      {
+        "Paragraph": {
+          "children": [
+            {
+              "Text": {
+                "literal": "A list can"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "List": {
+          "children": [
+            {
+              "ListItem": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "interrupt a paragraph"
+                    }
+                  },
+                  {
+                    "Paragraph": {
+                      "children": [
+                        {
+                          "Text": {
+                            "literal": "With a paragraph in the list"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "index": 1
+              }
+            }
+          ],
+          "tight": true,
+          "ordered": false,
+          "start": 1
+        }
+      },
+      {
+        "Paragraph": {
+          "children": [
+            {
+              "Text": {
+                "literal": "Only an ordered list that"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "List": {
+          "children": [
+            {
+              "ListItem": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "starts with 1"
+                    }
+                  }
+                ],
+                "index": 1
+              }
+            }
+          ],
+          "tight": true,
+          "ordered": true,
+          "start": 1
+        }
+      },
+      {
+        "Paragraph": {
+          "children": [
+            {
+              "Text": {
+                "literal": "can interrupt a list, so"
+              }
+            },
+            {
+              "SoftLinebreak": {
+                "literal": "\n"
+              }
+            },
+            {
+              "Text": {
+                "literal": "  6. this one didn't do it."
+              }
+            },
+            "EOI"
+          ]
+        }
+      },
+      "EOI"
+    ]
+  }
+}

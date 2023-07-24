@@ -141,6 +141,7 @@ impl HTMLRenderer {
   }
 
   fn list(&self, list: &List, action: Direction) -> io::Result<()> {
+    let start = list.start();
     let tag = if list.ordered() { "ol"} else { "ul" };
 
     if let Direction::Entering = action {
@@ -223,13 +224,14 @@ impl Visitor for HTMLRenderer {
           Node::List(list) => self.list(list, action),
           Node::ListItem(_) => self.list_item(action),
           Node::CodeBlock(_) => self.codeblock(action),
-          Node::Emphasis(_) => self.inline_style("<emp>", "</emp>", action),
+          Node::Emphasis(_) => self.inline_style("<em>", "</em>", action),
           Node::Strong(_) => self.inline_style("<strong>", "</strong>", action),
           Node::Code(_) => self.inline_style("<pre><code>", "</code></pre>", action),
           Node::Link(link) => self.link(link, action),
           Node::Image(img) => self.image(img),
           Node::Text(text) => write!(self.output.borrow_mut(), "{}", text.as_ref()),
           Node::Linebreak(_) => self.linebreak(),
+          Node::SoftLinebreak(_) => write!(self.output.borrow_mut(), " "),
           Node::Label(_) => return NextAction::GotoNext,
           Node::EOI => Ok(())
         };
@@ -256,11 +258,10 @@ impl Display for HTMLRenderer {
 #[cfg(test)]
 mod test {
     use pest::Parser;
-
-    use crate::{ast::parse_document, parser::{MarkdownParser, Rule}};
-
+    use crate::{ast::{parse_document, test::read_file_to_string}, parser::{MarkdownParser, Rule}};
     use super::*;
-    
+
+
     #[test]
     pub fn basic_test() {
         let input = "

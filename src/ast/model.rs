@@ -1,4 +1,4 @@
-use pest::iterators::Pair;
+use pest::iterators::{Pair, Pairs};
 
 use crate::{container_type, leaf_type, parser::Rule, error::ParseError, first_child};
 
@@ -6,27 +6,58 @@ use crate::{container_type, leaf_type, parser::Rule, error::ParseError, first_ch
 /// between a [`Pair`] and a Vec. This type implements [`std::ops::Deref`] to its wrapped
 /// vector to improve developer ergonomics.
 #[derive(PartialEq)]
-pub struct Children<'input>(Vec<Node<'input>>);
+#[cfg_attr(feature = "serialize", derive(serde::Serialize, serde::Deserialize))]
+pub struct Children<'input>(
+    #[cfg_attr(feature = "serialize", serde(borrow))] 
+    Vec<Node<'input>>
+);
 
 impl <'input> TryFrom<Pair<'input, Rule>> for Children<'input> {
     type Error = ParseError;
+
+
+    fn try_from(value: Pair<'input, Rule>) -> Result<Self, Self::Error> {
+        let span = value.as_str();
+        let span_start = value.as_span().start();
+        Self::try_from_pairs(value.into_inner(), span, span_start)
+    }
+}
+
+impl <'input> std::ops::Deref for Children<'input> {
+    type Target = Vec<Node<'input>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl <'input> std::ops::DerefMut for Children<'input> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl <'input> std::fmt::Debug for Children<'input> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_list().entries(self.iter()).finish()
+    }
+}
+
+impl <'input> Children<'input> {
 
     /// This method is a little gross, but it handles coalescing adjacent plaintext parser tokens
     /// into a single [`Node::Text`], as a naïve implementation would produce a single text node 
     /// for every word, space, special character, and escaped control character. By collapsing them
     /// into a single Node, we reduce the memory footprint of the final AST and make it easier 
     /// for traversal implementations to reason about the nodes in the tree.
-    fn try_from(value: Pair<'input, Rule>) -> Result<Self, Self::Error> {
-        let span = value.as_str();
-        let span_start = value.as_span().start();
-
+    pub fn try_from_pairs(pairs: Pairs<'input, Rule>, span: &'input str, start_index: usize) -> Result<Self, ParseError> {
         // Represents the sliding window over the &str that only contains plaintext.
-        let mut running_segment_start = span_start;
-        let mut running_segment_end = span_start;
+        let mut running_segment_start = start_index;
+        let mut running_segment_end = start_index;
 
         let mut children = Vec::new();
 
-        for child in value.into_inner() {
+        for child in pairs {
             let child_start = child.as_span().start();
             let child_end = child.as_span().end();
 
@@ -52,7 +83,7 @@ impl <'input> TryFrom<Pair<'input, Rule>> for Children<'input> {
             // If theses aren't equal, then we have plaintext to add.
             if running_segment_start != running_segment_end {
                 // Convert from absolute position in the input to the absolute position within the span
-                let start_index = running_segment_start - span_start;
+                let start_index = running_segment_start - start_index;
                 let end_index = start_index + (running_segment_end - running_segment_start);
                 children.push(Node::Text(Text { literal: &span[start_index..end_index] }));
             }
@@ -68,33 +99,12 @@ impl <'input> TryFrom<Pair<'input, Rule>> for Children<'input> {
         // Last check in case the final segment of the span was plaintext.
         if running_segment_start != running_segment_end {
             // Convert from absolute position in the input to the absolute position within the span
-            let start_index = running_segment_start - span_start; 
+            let start_index = running_segment_start - start_index; 
             let end_index = start_index + (running_segment_end - running_segment_start);
             children.push(Node::Text(Text { literal: &span[start_index..end_index] }));
         }
 
         Ok(Children(children))
-
-    }
-}
-
-impl <'input> std::ops::Deref for Children<'input> {
-    type Target = Vec<Node<'input>>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl <'input> std::ops::DerefMut for Children<'input> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl <'input> std::fmt::Debug for Children<'input> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_list().entries(self.iter()).finish()
     }
 }
 
@@ -105,8 +115,10 @@ impl <'input> std::fmt::Debug for Children<'input> {
 /// * `'input` - The lifetime is constrained to the lifetime of the input to the parser
 ///              since leaf nodes like Text contain a string slice from the original input.
 #[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "serialize", derive(serde::Deserialize, serde::Serialize))]
 pub enum Node<'input> {
     // Containers
+    #[cfg_attr(feature = "serialize", serde(borrow))]
     Document(Document<'input>),
     Paragraph(Paragraph<'input>),
     BlockQuote(BlockQuote<'input>),
@@ -122,6 +134,7 @@ pub enum Node<'input> {
     Image(Image<'input>),
     Text(Text<'input>), 
     Linebreak(Linebreak<'input>),
+    SoftLinebreak(SoftLinebreak<'input>),
     Code(Code<'input>),
     // End of input
     EOI
@@ -145,6 +158,7 @@ impl <'input> Node<'input> {
             Self::Image(_) => None,
             Self::Text(_) => None,
             Self::Linebreak(_) => None,
+            Self::SoftLinebreak(_) => None,
             Self::EOI => None,
         }
     }
@@ -166,6 +180,7 @@ impl <'input> Node<'input> {
             Self::Image(_) => None,
             Self::Text(_) => None,
             Self::Linebreak(_) => None,
+            Self::SoftLinebreak(_) => None,
             Self::EOI => None,
         }
     }
@@ -187,6 +202,7 @@ impl <'input> Node<'input> {
             Self::Image(img) => img.as_ref(),
             Self::Text(txt) => txt.as_ref(),
             Self::Linebreak(lb) => lb.as_ref(),
+            Self::SoftLinebreak(slb) => slb.as_ref(),
             Self::EOI => "EOI",
         }
     }
@@ -206,8 +222,14 @@ impl <'input> TryFrom<Pair<'input, Rule>> for Node<'input> {
             Rule::verbatim => Ok(Node::BlockQuote(BlockQuote::try_from(value)?)),
             Rule::header=> Ok(Node::Heading(Heading::try_from(value)?)),
             Rule::bullet_list | Rule::ordered_list => Ok(Node::List(List::try_from(value)?)),
-            Rule::list_item | Rule::list_item_tight => Ok(Node::ListItem(ListItem::try_from(value)?)),
-            Rule::codeblock => Ok(Node::CodeBlock(CodeBlock::try_from(value)?)),
+            Rule::star_bullet_item_tight | Rule::star_bullet_item
+            | Rule::dash_bullet_item_tight | Rule::dash_bullet_item
+            | Rule::plus_bullet_item_tight | Rule::plus_bullet_item
+            | Rule::period_ordered_list_item_tight | Rule::period_ordered_list_item
+            | Rule::parenthesis_ordered_list_item_tight | Rule::parenthesis_ordered_list_item 
+                => Ok(Node::ListItem(ListItem::try_from(value)?)),
+            Rule::fenced_codeblock | Rule::indented_codeblock 
+                => Ok(Node::CodeBlock(CodeBlock::try_from(value)?)),
             Rule::emphasis => Ok(Node::Emphasis(Emphasis::try_from(value)?)),
             Rule::strong => Ok(Node::Strong(Strong::try_from(value)?)),
             Rule::label => Ok(Node::Label(Label::try_from(value)?)),
@@ -217,7 +239,9 @@ impl <'input> TryFrom<Pair<'input, Rule>> for Node<'input> {
             // Leaf nodes
             Rule::str | Rule::space | Rule::symbol | 
             Rule::escaped_special_char | Rule::source => Ok(Node::Text(Text::from(value))),
-            Rule::linebreak => Ok(Node::Linebreak(Linebreak::from(value))),
+            Rule::linebreak | Rule::linebreak_literal => Ok(Node::Linebreak(Linebreak::from(value))),
+            Rule::normal_endline | Rule::blockquote_linebreak 
+                => Ok(Node::SoftLinebreak(SoftLinebreak::from(value))),
             // End of input
             Rule::EOI => Ok(Node::EOI),
             // Error
@@ -233,17 +257,18 @@ impl <'input> TryFrom<Pair<'input, Rule>> for Node<'input> {
 container_type!(Document);
 container_type!(Paragraph);
 container_type!(BlockQuote);
-container_type!(ListItem);
-container_type!(CodeBlock);
+container_type!(List, (tight, bool), (ordered, bool), (start, u32));
+container_type!(ListItem, (index, u32));
 container_type!(Emphasis);
 container_type!(Strong);
 container_type!(Label);
 container_type!(Code);
-container_type!(List, (tight, bool), (ordered, bool));
+container_type!(CodeBlock, (language, Option<&'input str>));
 container_type!(Heading, (level, u8));
 container_type!(Link, (source, &'input str));
 leaf_type!(Text);
 leaf_type!(Linebreak);
+leaf_type!(SoftLinebreak);
 leaf_type!(Image, (source, &'input str));
 
 // -----------------------------------------------------------------------
@@ -278,8 +303,80 @@ impl <'input> TryFrom<Pair<'input, Rule>> for List<'input> {
 
       let children = Children::try_from(list)?;
 
-      Ok( Self { children, span, tight, ordered } )
+      let start = match &children[0] {
+        Node::ListItem(list_item) => std::cmp::max(1, list_item.index()),
+        _ => 0,
+      };
+
+      Ok( Self { children, span, tight, ordered, start } )
   }
+}
+
+impl <'input> TryFrom<Pair<'input, Rule>> for ListItem<'input> {
+    type Error = ParseError;
+
+    fn try_from(value: Pair<'input, Rule>) -> Result<Self, Self::Error> {
+        let span = value.as_str();
+        let location = value.line_col();
+
+        let mut list_item_pairs = value.into_inner();
+        let bullet_or_enumerator = match list_item_pairs.next() {
+            Some(pair) => pair,
+            None => {
+                return Err(ParseError::SyntaxError(
+                    format!(r#"Expected a list marker in "{span}", found nothing. Error occurred at {location:?}"#)
+                ));
+            }
+        };
+
+        let index = match bullet_or_enumerator.as_rule() {
+            Rule::list_index => bullet_or_enumerator.as_str().parse()?,
+            Rule::dash_bullet | Rule::star_bullet | Rule::plus_bullet => 1,
+            other => {
+                return Err(ParseError::SyntaxError(
+                    format!(r#"Expected a bullet or list index in {span}, but found {other:?}. Error occurred at {location:?}"#)
+                ));
+            }
+        };
+
+        let children = match list_item_pairs.next() {
+            Some(pair) => Children::try_from(pair)?,
+            None => {
+                return Err(ParseError::SyntaxError(
+                    format!(r#"Expected list contents in "{span}", but found none. Error occurred at {location:?}"#)
+                ));
+            }
+        };
+
+        Ok( Self { children, span, index } )
+    }
+}
+
+impl <'input> TryFrom<Pair<'input, Rule>> for CodeBlock<'input> {
+    type Error = ParseError;
+
+    fn try_from(value: Pair<'input, Rule>) -> Result<Self, Self::Error> {
+        let location = value.line_col();
+        let start_pos = value.as_span().start();
+        let span = value.as_str();
+
+        let mut pairs = match value.as_rule() {
+            Rule::indented_codeblock => return Ok(Self { span, language: None, children: Children::try_from(value)? }),
+            Rule::fenced_codeblock => value.into_inner(),
+            other => return Err(ParseError::SyntaxError(
+                format!(r#"Expected a codeblock type in "{span}", but found {other:?}. Error occurred at {location:?}"#)
+            ))
+        };
+
+        let language = match pairs.peek().map(|node| node.as_rule()) {
+            Some(Rule::info_string_language) => Some(pairs.next().unwrap().as_str()),
+            _ => None,
+        };
+
+        let children = Children::try_from_pairs(pairs, span, start_pos)?;
+
+        Ok( Self {span, language, children } )
+    }
 }
 
 impl <'input> TryFrom<Pair<'input, Rule>> for Heading<'input> {
@@ -288,16 +385,15 @@ impl <'input> TryFrom<Pair<'input, Rule>> for Heading<'input> {
 
   fn try_from(value: Pair<'input, Rule>) -> Result<Self, Self::Error> {
       let location = value.line_col();
+      let start_index = value.as_span().start();
       let span = value.as_str();
 
       let mut children = value.into_inner();
       let hashes = children.next()
           .ok_or(ParseError::SyntaxError(format!(r#"No header markers found in "{span}". Error occurred at: {location:?}"#)))?;
-      let title = children.next()
-          .ok_or(ParseError::SyntaxError(format!(r#"No title found in "{span}". Error occurred at: {location:?}"#)))?;
       
       let level = hashes.as_str().len() as u8;
-      let children = Children::try_from(title)?;
+      let children = Children::try_from_pairs(children, span, start_index)?;
       
       Ok(Self { children, span, level })
   }

@@ -12,6 +12,12 @@ impl From<pest::error::Error<Rule>> for ParseError {
   }
 }
 
+impl From<core::num::ParseIntError> for ParseError {
+    fn from(value: core::num::ParseIntError) -> Self {
+      ParseError::SyntaxError(value.to_string())
+    }
+}
+
 impl std::fmt::Display for ParseError {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
       match self {

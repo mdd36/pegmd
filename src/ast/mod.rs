@@ -33,13 +33,14 @@ pub fn parse_rule(input: &str, rule: Rule) -> Result<Node<'_>, ParseError> {
 }
 
 
-#[cfg(test)]
-mod test {
+#[cfg(all(feature = "serialize", test))]
+pub mod test {
+    use pretty_assertions::assert_eq;
     use std::{fs::read_to_string, path::PathBuf};
 
     use super::*;
 
-    fn read_file_to_string(file_name: &str) -> String {
+    pub fn read_file_to_string(file_name: &str) -> String {
         let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path.push("test_data/");
         path.push(file_name);
@@ -50,141 +51,35 @@ mod test {
 
     #[test]
     pub fn markup_test() {
-        let input = read_file_to_string("markup.md");
-        let mut root = parse_rule(&input, Rule::paragraph)
+        let input = read_file_to_string("markdown/markup.md");
+        let root = parse_rule(&input, Rule::paragraph)
             .unwrap_or_else(|e| panic!("Failed to parse document: {e}"));
-
-
-        let mut markup_nodes = root.children_mut()
-            .unwrap_or_else(|| panic!("Expected child nodes, but found none!"))
-            .iter_mut();
-
-        match markup_nodes.next() {
-            Some(Node::Strong(strong)) => {
-                let text_node = strong.children_mut()
-                    .pop()
-                    .unwrap_or_else(|| panic!("Missing text child for strong node"));
-                assert_eq!(text_node.as_span(), "This text is strong");
-            }
-            node => panic!("Expected a strong text node, but found {node:?}"),
-        };
-
-        match markup_nodes.next() { 
-            Some(Node::Emphasis(emphasis)) => {
-                let text_node = emphasis.children_mut()
-                    .pop()
-                    .unwrap_or_else(|| panic!("Missing text child for emphasis node"));
-                assert_eq!(text_node.as_span(), "This text is emphasized");
-            }
-            node => panic!("Expected an emphasis text node, but found {node:?}"),
-        };
-
-        match markup_nodes.next() { 
-            Some(Node::Link(link)) => {
-                assert_eq!(link.source(), "https://github.com");
-                let text_node = link.children_mut()
-                    .pop()
-                    .unwrap_or_else(|| panic!("Missing text child for link node"));
-                assert_eq!(text_node.as_span(), "this is a link");
-            }
-            node => panic!("Expected a link node, but found {node:?}"),
-        };
-
-        match markup_nodes.next() {
-            Some(Node::Link(link)) => {
-                assert_eq!(link.source(), "https://crates.io");
-                let text_node = link.children_mut()
-                    .pop()
-                    .unwrap_or_else(|| panic!("Missing text child for link node"));
-                assert_eq!(text_node.as_span(), "https://crates.io");
-            }
-            node => panic!("Expected a link node, but found {node:?}"),
-        };
-
-        match markup_nodes.next() {
-            Some(Node::Image(img)) => {
-                assert_eq!(img.source(), "https://tenor.com/oDMG.gif");
-                assert_eq!(img.as_ref(), "huge mistake");
-            }
-            node => panic!("Expected a image node, but found {node:?}"),
-        };
-
-        match markup_nodes.next() {
-            Some(Node::Code(code)) => {
-                match code.children_mut().pop() {
-                    Some(Node::Text(text)) => assert_eq!(text.as_ref(), r#"print("hello world!")"#),
-                    node => panic!("Expected a text node, but found {node:?}"),
-                }
-            }
-            node => panic!("Expected a code node, but found {node:?}"),
-        }
-
-        match markup_nodes.next() {
-            Some(Node::Emphasis(emphasis)) => {
-                let mut children = emphasis.children_mut().iter_mut();
-                
-                match children.next() {
-                    Some(Node::Text(text)) => assert_eq!(text.as_ref(), "some "),
-                    node => panic!("Expected a text node, but found {node:?}"),
-                };
-                
-                match children.next() {
-                    Some(Node::Strong(strong)) => {
-                        match strong.children_mut().iter_mut().next() {
-                            Some(Node::Text(text)) => assert_eq!(text.as_ref(), "bold and emphasized"),
-                            node => panic!("Expected a text node, but found {node:?}"),
-                        }
-                    }
-                    node => panic!("Expected a strong node, but found {node:?}"),
-                }
-
-                match children.next() {
-                    Some(Node::Text(text)) => assert_eq!(text.as_ref(), " text"),
-                    node => panic!("Expected a text node, but found {node:?}"),
-                }
-            } 
-            node => panic!("Expected an emphasis node, but found {node:?}"),
-        }
-
-        match markup_nodes.next() {
-            Some(Node::Strong(strong)) => {                
-                match strong.children_mut().pop().as_mut() {
-                    Some(Node::Link(link)) => {
-                        assert_eq!(link.source(), "https://en.wikipedia.org/wiki/Where_no_man_has_gone_before");
-                        match link.children_mut().pop() {
-                            Some(Node::Text(text)) => assert_eq!(text.as_ref(), "to boldly go"),
-                            node => panic!("Expected a text node, but found {node:?}"),
-                        }
-                    }
-                    node => panic!("Expected a link node, but found {node:?}"),
-                };
-            } 
-            node => panic!("Expected an strong node, but found {node:?}"),
-        }
-        
-        match markup_nodes.next() {
-            Some(Node::Emphasis(emphasis)) => {                
-                match emphasis.children_mut().pop().as_mut() {
-                    Some(Node::Code(code)) => {
-                        match code.children_mut().pop() {
-                            Some(Node::Text(text)) => assert_eq!(text.as_ref(), "echo 'hello world'"),
-                            node => panic!("Expected a text node, but found {node:?}"),
-                        }
-                    }
-                    node => panic!("Expected a code node, but found {node:?}"),
-                };
-            } 
-            node => panic!("Expected an emphasis node, but found {node:?}"),
-        }
+        let actual = serde_json::to_string_pretty(&root)
+            .unwrap_or_else(|e| panic!("Failed to serialize AST: {e}"));
+        let expected = read_file_to_string("ast_json/markup.json");
+        assert_eq!(&actual, &expected);
     }
 
     #[test]
     pub fn list_test() {
-
+        let input = read_file_to_string("markdown/lists.md");
+        let document = parse_document(&input)
+            .unwrap_or_else(|e| panic!("Failed to parse document: {e:?}"));
+        let actual = serde_json::to_string_pretty(&document)
+            .unwrap_or_else(|e| panic!("Failed to serialize AST: {e}"));
+        let expected = read_file_to_string("ast_json/lists.json");
+        assert_eq!(&actual, &expected);
     }
 
     #[test]
     pub fn blocks_test() {
+        let input = read_file_to_string("markdown/blocks.md");
+        let document = parse_document(&input)
+            .unwrap_or_else(|e| panic!("Failed to parse document: {e:?}"));
+        let actual = serde_json::to_string_pretty(&document)
+            .unwrap_or_else(|e| panic!("Failed to serialize AST: {e}"));
+        let expected = read_file_to_string("ast_json/blocks.json");
 
+        assert_eq!(&actual, &expected);
     }
 }

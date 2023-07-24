@@ -1,8 +1,7 @@
-- Some complex list tests
+- Some *complex list tests*
 
 - This one is loose
   * But it has a tight sublist
-  - With intermixed bullets
 
 1. This one is ordered
   6. And its sublist starts at 6
@@ -12,6 +11,8 @@
 
 A list can
   * interrupt a paragraph
+
+    With a paragraph in the list
 
 Only an ordered list that
   1. starts with 1
