@@ -3,7 +3,7 @@ use crate::first_child;
 use crate::parser::{MarkdownParser, Rule};
 use crate::error::ParseError;
 
-use self::model::{Node, Document};
+use self::model::Node;
 
 mod macros;
 
@@ -26,14 +26,17 @@ pub fn parse_document(input: &str) -> Result<Node<'_>, ParseError> {
     Ok(document)
 }
 
-pub fn parse_rule(input: &str, rule: Rule) -> Result<Node<'_>, ParseError> {
+/// Rather than parsing the input to a [`Node::Document`], parse with a different [`Rule`]
+/// as the root. This is intended for internal testing only since it requires leaking
+/// the pest Rule type.
+fn parse_rule(input: &str, rule: Rule) -> Result<Node<'_>, ParseError> {
     let mut raw_tokens = MarkdownParser::parse(rule, input)?;
     let root = Node::try_from(first_child!(raw_tokens)?)?;
     Ok(root)
 }
 
 
-#[cfg(all(feature = "serialize", test))]
+#[cfg(all(feature = "serde_support", test))]
 pub mod test {
     use pretty_assertions::assert_eq;
     use std::{fs::read_to_string, path::PathBuf};

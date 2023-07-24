@@ -6,9 +6,9 @@ use crate::{container_type, leaf_type, parser::Rule, error::ParseError, first_ch
 /// between a [`Pair`] and a Vec. This type implements [`std::ops::Deref`] to its wrapped
 /// vector to improve developer ergonomics.
 #[derive(PartialEq)]
-#[cfg_attr(feature = "serialize", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde_support", derive(serde::Serialize, serde::Deserialize))]
 pub struct Children<'input>(
-    #[cfg_attr(feature = "serialize", serde(borrow))] 
+    #[cfg_attr(feature = "serde_support", serde(borrow))] 
     Vec<Node<'input>>
 );
 
@@ -115,10 +115,10 @@ impl <'input> Children<'input> {
 /// * `'input` - The lifetime is constrained to the lifetime of the input to the parser
 ///              since leaf nodes like Text contain a string slice from the original input.
 #[derive(Debug, PartialEq)]
-#[cfg_attr(feature = "serialize", derive(serde::Deserialize, serde::Serialize))]
+#[cfg_attr(feature = "serde_support", derive(serde::Deserialize, serde::Serialize))]
 pub enum Node<'input> {
     // Containers
-    #[cfg_attr(feature = "serialize", serde(borrow))]
+    #[cfg_attr(feature = "serde_support", serde(borrow))]
     Document(Document<'input>),
     Paragraph(Paragraph<'input>),
     BlockQuote(BlockQuote<'input>),
