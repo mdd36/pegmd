@@ -35,23 +35,12 @@ fn parse_rule(input: &str, rule: Rule) -> Result<Node<'_>, ParseError> {
     Ok(root)
 }
 
-
 #[cfg(all(feature = "serde_support", test))]
 pub mod test {
     use pretty_assertions::assert_eq;
-    use std::{fs::read_to_string, path::PathBuf};
-
+    use crate::test_utils::read_file_to_string;
     use super::*;
-
-    pub fn read_file_to_string(file_name: &str) -> String {
-        let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        path.push("test_data/");
-        path.push(file_name);
-
-        read_to_string(&path)
-            .unwrap_or_else(|e| panic!("Failed to read file {path:?} to string: {e}"))
-    }
-
+    
     #[test]
     pub fn markup_test() {
         let input = read_file_to_string("markdown/markup.md");

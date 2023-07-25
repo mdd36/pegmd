@@ -206,12 +206,12 @@ info_string = _{ silent_space* ~ info_string_language ~ (silent_space* ~ (!"`" ~
 
 linebreak_literal = { NEWLINE }
 code = {
-    single_tick ~ silent_space? ~ ((!"`" ~ non_space)+ |              !(space ~ single_tick) ~ (space | linebreak_literal ~ !blank_line))+ ~ silent_space? ~ (single_tick | EOI) ~ silent_space* ~ NEWLINE
-  | two_ticks   ~ silent_space? ~ ((!"`" ~ non_space)+ | "`" ~ !"`" | !(space ~ two_ticks)   ~ (space | linebreak_literal ~ !blank_line))+ ~ silent_space? ~ (two_ticks | EOI) ~ silent_space* ~ NEWLINE
+    single_tick ~ silent_space? ~ ((!"`" ~ non_space)+ |              !(space ~ single_tick) ~ (space | linebreak_literal ~ !blank_line))+ ~ silent_space? ~ (single_tick | EOI)
+  | two_ticks   ~ silent_space? ~ ((!"`" ~ non_space)+ | "`" ~ !"`" | !(space ~ two_ticks)   ~ (space | linebreak_literal ~ !blank_line))+ ~ silent_space? ~ (two_ticks | EOI)
 }
 
 backtick_fenced_codeblock = _{
-    three_ticks ~ info_string? ~ NEWLINE? ~ ((!"`" ~ non_space)+ | "`"{1,2} ~ !"`" | !(space+ ~ "`"{3,}) ~ (space | linebreak_literal ~ !"`"{3,}))* ~ NEWLINE ~ non_indent_space? ~ ("`"{3,} ~ silent_space* ~ NEWLINE | EOI) 
+    three_ticks ~ info_string? ~ NEWLINE? ~ ((!"`" ~ non_space)+ | "`"{1,2} ~ !"`" | !(space+ ~ "`"{3,}) ~ (space | linebreak_literal ~ !"`"{3,}))* ~ NEWLINE ~ non_indent_space? ~ ("`"{3,} ~ silent_space* ~ NEWLINE | EOI)
   | four_ticks  ~ info_string? ~ NEWLINE? ~ ((!"`" ~ non_space)+ | "`"{1,3} ~ !"`" | !(space+ ~ "`"{4,}) ~ (space | linebreak_literal ~ !"`"{4,}))* ~ NEWLINE ~ non_indent_space? ~ ("`"{4,} ~ silent_space* ~ NEWLINE | EOI) 
   | five_ticks  ~ info_string? ~ NEWLINE? ~ ((!"`" ~ non_space)+ | "`"{1,4} ~ !"`" | !(space+ ~ "`"{5,}) ~ (space | linebreak_literal ~ !"`"{5,}))* ~ NEWLINE ~ non_indent_space? ~ ("`"{5,} ~ silent_space* ~ NEWLINE | EOI)
 }

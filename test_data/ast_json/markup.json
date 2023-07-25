@@ -90,6 +90,11 @@
         }
       },
       {
+        "SoftLinebreak": {
+          "literal": "\n"
+        }
+      },
+      {
         "Emphasis": {
           "children": [
             {
@@ -148,8 +153,14 @@
         "Emphasis": {
           "children": [
             {
-              "Text": {
-                "literal": "`echo 'hello world'`"
+              "Code": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "echo 'hello world'"
+                    }
+                  }
+                ]
               }
             }
           ]
