@@ -238,8 +238,8 @@ impl <'input> TryFrom<Pair<'input, Rule>> for Node<'input> {
             Rule::code => Ok(Node::Code(Code::try_from(value)?)),
             // Leaf nodes
             Rule::str | Rule::space | Rule::symbol | 
-            Rule::escaped_special_char | Rule::source => Ok(Node::Text(Text::from(value))),
-            Rule::linebreak | Rule::linebreak_literal => Ok(Node::Linebreak(Linebreak::from(value))),
+            Rule::escaped_special_char | Rule::source | Rule::linebreak_literal => Ok(Node::Text(Text::from(value))),
+            Rule::linebreak => Ok(Node::Linebreak(Linebreak::from(value))),
             Rule::normal_endline | Rule::blockquote_linebreak 
                 => Ok(Node::SoftLinebreak(SoftLinebreak::from(value))),
             // End of input

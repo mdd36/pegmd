@@ -76,7 +76,7 @@
               }
             },
             {
-              "Linebreak": {
+              "Text": {
                 "literal": "\n"
               }
             },
@@ -86,12 +86,12 @@
               }
             },
             {
-              "Linebreak": {
+              "Text": {
                 "literal": "\n"
               }
             },
             {
-              "Linebreak": {
+              "Text": {
                 "literal": "\n"
               }
             },
@@ -113,12 +113,12 @@
               }
             },
             {
-              "Linebreak": {
+              "Text": {
                 "literal": "\n"
               }
             },
             {
-              "Linebreak": {
+              "Text": {
                 "literal": "\n"
               }
             },
@@ -128,7 +128,7 @@
               }
             },
             {
-              "Linebreak": {
+              "Text": {
                 "literal": "\n"
               }
             },
