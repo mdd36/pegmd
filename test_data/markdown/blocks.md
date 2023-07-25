@@ -25,5 +25,7 @@ for x in range(1, 10):
 - A basic list
 - Pretty simple
 * This is a separate list
+****** *** *
+* The rule broke the list
 
 1. This one is ordered

@@ -164,14 +164,21 @@ impl HTMLRenderer {
 
     fn list(&self, list: &List, action: Direction) -> Result<(), RenderError> {
         let start = list.start();
-        let tag = if list.ordered() { "ol" } else { "ul" };
 
         if let Direction::Entering = action {
             self.context.borrow_mut().push_list_context(list);
-            self.tag_with_attrs(tag, &[("start", &start.to_string())], false)?;
+            if list.ordered() {
+                self.tag_with_attrs("ol", &[("start", &start.to_string())], false)?;
+            } else {
+                self.tag_with_attrs("ul", &[], false)?;
+            }
         } else {
             self.context.borrow_mut().drop_list_context();
-            write!(self.output.borrow_mut(), "</{tag}>")?;
+            if list.ordered() {
+                write!(self.output.borrow_mut(), "</ol>")?;
+            } else {
+                write!(self.output.borrow_mut(), "</ul>")?;
+            }
         }
         Ok(())
     }
@@ -256,6 +263,9 @@ impl Visitor for HTMLRenderer {
                 write!(self.output.borrow_mut(), " ").map_err(RenderError::from)
             }
             Node::Label(_) => return NextAction::GotoNext,
+            Node::ThematicBreak(_) =>  {
+                write!(self.output.borrow_mut(), "<hr/>").map_err(RenderError::from)
+            }
             Node::EOI => Ok(()),
         };
 

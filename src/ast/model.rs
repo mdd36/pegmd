@@ -134,6 +134,7 @@ leaf_type!(Text);
 leaf_type!(Linebreak);
 leaf_type!(SoftLinebreak);
 leaf_type!(Image, (source, &'input str));
+leaf_type!(ThematicBreak);
 
 /// for that type, except for EOI since EOI contains nothing by definition.
 ///
@@ -166,6 +167,7 @@ pub enum Node<'input> {
     Linebreak(Linebreak<'input>),
     SoftLinebreak(SoftLinebreak<'input>),
     Code(Code<'input>),
+    ThematicBreak(ThematicBreak<'input>),
     // End of input
     EOI,
 }
@@ -189,6 +191,7 @@ impl<'input> Node<'input> {
             Self::Text(_) => None,
             Self::Linebreak(_) => None,
             Self::SoftLinebreak(_) => None,
+            Self::ThematicBreak(_) => None,
             Self::EOI => None,
         }
     }
@@ -211,6 +214,7 @@ impl<'input> Node<'input> {
             Self::Text(_) => None,
             Self::Linebreak(_) => None,
             Self::SoftLinebreak(_) => None,
+            Self::ThematicBreak(_) => None,
             Self::EOI => None,
         }
     }
@@ -233,6 +237,7 @@ impl<'input> Node<'input> {
             Self::Text(txt) => txt.as_span(),
             Self::Linebreak(lb) => lb.as_span(),
             Self::SoftLinebreak(slb) => slb.as_span(),
+            Self::ThematicBreak(tb) => tb.as_span(),
             Self::EOI => "EOI",
         }
     }
@@ -286,6 +291,7 @@ impl<'input> TryFrom<Pair<'input, Rule>> for Node<'input> {
             Rule::normal_endline | Rule::blockquote_linebreak => {
                 Ok(Node::SoftLinebreak(SoftLinebreak::from(value)))
             }
+            Rule::thematic_break => Ok(Node::ThematicBreak(ThematicBreak::from(value))),
             // End of input
             Rule::EOI => Ok(Node::EOI),
             // Error

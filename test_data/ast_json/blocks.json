@@ -208,6 +208,32 @@
         }
       },
       {
+        "ThematicBreak": {
+          "literal": "****** *** *\n"
+        }
+      },
+      {
+        "List": {
+          "children": [
+            {
+              "ListItem": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "The rule broke the list"
+                    }
+                  }
+                ],
+                "index": 1
+              }
+            }
+          ],
+          "tight": true,
+          "ordered": false,
+          "start": 1
+        }
+      },
+      {
         "List": {
           "children": [
             {

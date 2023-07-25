@@ -1,6 +1,6 @@
 document = { SOI ~ section* ~ EOI }
 section = _{ blank_line* ~ section_contents ~ blank_line* }
-section_contents = _{ verbatim | reference | header | bullet_list | ordered_list | code_block | paragraph }
+section_contents = _{ verbatim | reference | header | bullet_list | ordered_list | code_block | thematic_break |  paragraph }
 
 COMMENT = _{ ("[//]: # (" ~ ("\\)" | (!")" ~ ANY))* ~ ")") | "<!--" ~ (!"-->" ~ ANY)+ ~ "-->" }
 
@@ -23,7 +23,7 @@ markup = _{ strong | emphasis | code | image | link }
 str = { normal_char+ ~ (normal_char | "_"+ ~ &normal_char)* }
 symbol = { special_char }
 
-normal_endline = { space? ~ NEWLINE ~ !(blank_line | indent | non_indent_space? ~ (">" | atx_hash | "1. " | "1) " | !star_strong ~ !star_emphasis ~ bullet)) }
+normal_endline = { space? ~ NEWLINE ~ !(blank_line | indent | thematic_break | block_quote_open | non_indent_space? ~ (atx_hash | "1. " | "1) " | !star_strong ~ !star_emphasis ~ bullet)) }
 trailing_endline = _{ space* ~ NEWLINE ~ EOI }
 linebreak = { "  " ~ normal_endline }
 endline = _{ normal_endline | trailing_endline | linebreak }
@@ -33,6 +33,11 @@ inlines = _{ ((!endline ~ inline) | (endline ~ &inline))+ ~ endline? }
 
 label = { (!"]" ~ !NEWLINE ~ inline)* }
 source = { (!")" ~ !">" ~ !"]" ~ non_space)+ }
+
+star_line = _{ non_indent_space? ~ ("*" ~ space*){3,} ~ NEWLINE }
+dash_line = _{ non_indent_space? ~ ("-" ~ space*){3,} ~ NEWLINE }
+underscore_line = _{ non_indent_space? ~ ("_" ~ space*){3,} ~ NEWLINE }
+thematic_break = { star_line | dash_line | underscore_line }
 
 paragraph = { non_indent_space? ~ inlines ~ (blank_line+ | EOI) }
 block_quote_open = _{ non_indent_space? ~ ">" }
@@ -48,7 +53,7 @@ header = {
   blank_line* 
 }
 
-end_list = { space* ~ COMMENT }
+end_list = { space* ~ COMMENT | &thematic_break }
 
 star_bullet = { "*" ~ silent_space+ }
 dash_bullet = { "-" ~ silent_space+ }
