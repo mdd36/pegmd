@@ -7,14 +7,14 @@ use std::io::Write;
 #[derive(Debug)]
 struct ListContext {
     tight: bool,
-    start: u32,
+    _start: u32,
 }
 
 impl<'a> From<&List<'a>> for ListContext {
     fn from(value: &List<'a>) -> Self {
         Self {
             tight: value.tight(),
-            start: value.start(),
+            _start: value.start(),
         }
     }
 }
