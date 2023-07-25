@@ -131,7 +131,7 @@ impl HTMLRenderer {
 
     fn image(&self, link: &Image) -> Result<(), RenderError> {
         let source = link.source();
-        let alt = link.as_ref();
+        let alt = link.as_span();
         self.tag_with_attrs("img", &[("src", source), ("alt", alt)], true)
     }
 
@@ -249,7 +249,7 @@ impl Visitor for HTMLRenderer {
             Node::Link(link) => self.link(link, action),
             Node::Image(img) => self.image(img),
             Node::Text(text) => {
-                write!(self.output.borrow_mut(), "{}", text.as_ref()).map_err(RenderError::from)
+                write!(self.output.borrow_mut(), "{}", text.as_span()).map_err(RenderError::from)
             }
             Node::Linebreak(_) => self.linebreak(),
             Node::SoftLinebreak(_) => {

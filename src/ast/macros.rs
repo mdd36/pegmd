@@ -30,47 +30,47 @@ macro_rules! first_child {
 /// If extra fields are provided, the macro will create a non-mutating getter method for each field.
 #[macro_export]
 macro_rules! container_type {
-  ($name:ident) => {
-      #[derive(std::fmt::Debug, PartialEq)]
-      #[cfg_attr(feature = "serde_support", derive(serde::Serialize, serde::Deserialize))]
-      pub struct $name<'input> {
-          children: Children<'input>,
-          #[cfg_attr(feature = "serde_support", serde(skip_serializing))]
-          span: &'input str,
-      }
+    ($name:ident) => {
+        #[derive(std::fmt::Debug, PartialEq)]
+        #[cfg_attr(feature = "serde_support", derive(serde::Serialize, serde::Deserialize))]
+        pub struct $name<'input> {
+            children: Children<'input>,
+            #[cfg_attr(feature = "serde_support", serde(skip_serializing))]
+            span: &'input str,
+        }
 
-      impl <'input> TryFrom<Pair<'input, Rule>> for $name<'input> {
-          type Error = ParseError;
+        impl <'input> TryFrom<Pair<'input, Rule>> for $name<'input> {
+            type Error = ParseError;
 
-          fn try_from(value: Pair<'input, Rule>) -> Result<Self, Self::Error> {
-            let span = value.as_str();
-            let children = Children::try_from(value)?;
-            Ok (Self { span, children })
-          }
-      }
-
-      impl <'input> $name<'input> {
-        #[allow(dead_code)]
-          pub fn new(children: Children<'input>, span: &'input str) -> Self {
-            Self {
-              children,
-              span,
+            fn try_from(value: Pair<'input, Rule>) -> Result<Self, Self::Error> {
+                let span = value.as_str();
+                let children = Children::try_from(value)?;
+                Ok (Self { span, children })
             }
-          }
+        }
 
-          pub fn children(&self) -> &Children {
-            &self.children
-          }
+        impl <'input> $name<'input> {
+            #[allow(dead_code)]
+            pub fn new(children: Children<'input>, span: &'input str) -> Self {
+                Self {
+                    children,
+                    span,
+                }
+            }
 
-          pub fn children_mut(&'input mut self) -> &mut Children {
-            &mut self.children
-          }
+            pub fn children(&self) -> &Children {
+                &self.children
+            }
 
-          pub fn as_span(&self) -> &str {
-            self.span
-          }
-      }
-  };
+            pub fn children_mut(&'input mut self) -> &mut Children {
+                &mut self.children
+            }
+
+            pub fn as_span(&self) -> &str {
+                self.span
+            }
+        }
+    };
 
     ($name: ident $(, ($field_name: ident, $ty: ty))+) => {
         #[derive(std::fmt::Debug, PartialEq)]
@@ -103,17 +103,17 @@ macro_rules! container_type {
 
             pub fn children(&self) -> &Children {
                 &self.children
-              }
+            }
 
-              pub fn children_mut(&'input mut self) -> &mut Children {
+            pub fn children_mut(&'input mut self) -> &mut Children {
                 &mut self.children
-              }
+            }
 
             $(pub fn $field_name(&self) -> $ty {
                 self.$field_name
             })+
-      }
-  };
+        }
+    };
 }
 
 /// Creates a struct to represent a leaf node, along with some trait implementations.
@@ -127,7 +127,7 @@ macro_rules! container_type {
 /// If extra fields are provided, the macro will create a non-mutating getter method for each field.
 #[macro_export]
 macro_rules! leaf_type {
-  ($name: ident) => {
+    ($name: ident) => {
 
         #[derive(std::fmt::Debug, PartialEq)]
         #[cfg_attr(feature = "serde_support", derive(serde::Serialize, serde::Deserialize))]
@@ -135,40 +135,50 @@ macro_rules! leaf_type {
             literal: &'input str,
         }
 
-      impl <'input> From<Pair<'input, Rule>> for $name<'input> {
-          fn from(value: Pair<'input, Rule>) -> Self {
-              Self { literal: value.as_str() }
-          }
-      }
-
-    impl <'input> AsRef<str> for $name<'input> {
-        fn as_ref(&self) -> &str {
-            &self.literal
+        impl <'input> From<Pair<'input, Rule>> for $name<'input> {
+            fn from(value: Pair<'input, Rule>) -> Self {
+                Self { literal: value.as_str() }
+            }
         }
-    }
-  };
 
-  ($name: ident $(, ($field_name: ident, $ty: ty))+) => {
+        impl <'input> AsRef<str> for $name<'input> {
+            fn as_ref(&self) -> &str {
+                &self.literal
+            }
+        }
 
-      #[derive(std::fmt::Debug, PartialEq)]
-      #[cfg_attr(feature = "serde_support", derive(serde::Serialize, serde::Deserialize))]
-      pub struct $name<'input> {
-          literal: &'input str,
-          $($field_name: $ty,)+
-      }
+        impl <'input> $name<'input> {
+            pub fn as_span(&self) -> &'input str {
+                &self.literal
+            }
+        }
+    };
 
-      impl <'input> AsRef<str> for $name<'input> {
-          fn as_ref(&self) -> &str {
-              &self.literal
-          }
-      }
+    ($name: ident $(, ($field_name: ident, $ty: ty))+) => {
 
-      impl <'input> $name<'input> {
-          $(
-              pub fn $field_name(&self) -> $ty {
-                  self.$field_name
-              }
-          )+
-      }
-  };
+        #[derive(std::fmt::Debug, PartialEq)]
+        #[cfg_attr(feature = "serde_support", derive(serde::Serialize, serde::Deserialize))]
+        pub struct $name<'input> {
+            literal: &'input str,
+            $($field_name: $ty,)+
+        }
+
+        impl <'input> AsRef<str> for $name<'input> {
+            fn as_ref(&self) -> &str {
+                &self.literal
+            }
+        }
+
+        impl <'input> $name<'input> {
+            pub fn as_span(&self) -> &'input str {
+                &self.literal
+            }
+
+            $(
+                pub fn $field_name(&self) -> $ty {
+                    self.$field_name
+                }
+            )+
+        }
+    };
 }

@@ -19,6 +19,8 @@ If the `html` feature is enabled, the crate provides the `html::HTMLTransformer`
 ## Current Limitations
 While the end goal for the parser is to support the entire CommonMark spec, it currently doesn't support:
 
+- [Thematic breaks (aka horizontal rules)](https://spec.commonmark.org/0.30/#thematic-breaks)
+- [Reference links](https://spec.commonmark.org/0.30/#link-reference-definitions)
 - [HTML blocks](https://spec.commonmark.org/0.30/#html-blocks)
 - [Setext headings](https://spec.commonmark.org/0.30/#setext-headings)
 - [ATX headings with closing hashes](https://spec.commonmark.org/0.30/#example-71)

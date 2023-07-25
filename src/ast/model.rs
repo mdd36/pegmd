@@ -116,6 +116,25 @@ impl<'input> Children<'input> {
     }
 }
 
+// Create all the different AST node types. See the macros.rs file for how they're defined
+// and what traits are automatically implemented.
+container_type!(Document);
+container_type!(Paragraph);
+container_type!(BlockQuote);
+container_type!(List, (tight, bool), (ordered, bool), (start, u32));
+container_type!(ListItem, (index, u32));
+container_type!(Emphasis);
+container_type!(Strong);
+container_type!(Label);
+container_type!(Code);
+container_type!(CodeBlock, (language, Option<&'input str>));
+container_type!(Heading, (level, u8));
+container_type!(Link, (source, &'input str));
+leaf_type!(Text);
+leaf_type!(Linebreak);
+leaf_type!(SoftLinebreak);
+leaf_type!(Image, (source, &'input str));
+
 /// for that type, except for EOI since EOI contains nothing by definition.
 ///
 /// ### Lifetime Parameters
@@ -210,10 +229,10 @@ impl<'input> Node<'input> {
             Self::Label(l) => l.as_span(),
             Self::Link(l) => l.as_span(),
             Self::Code(c) => c.as_span(),
-            Self::Image(img) => img.as_ref(),
-            Self::Text(txt) => txt.as_ref(),
-            Self::Linebreak(lb) => lb.as_ref(),
-            Self::SoftLinebreak(slb) => slb.as_ref(),
+            Self::Image(img) => img.as_span(),
+            Self::Text(txt) => txt.as_span(),
+            Self::Linebreak(lb) => lb.as_span(),
+            Self::SoftLinebreak(slb) => slb.as_span(),
             Self::EOI => "EOI",
         }
     }
@@ -276,25 +295,6 @@ impl<'input> TryFrom<Pair<'input, Rule>> for Node<'input> {
         }
     }
 }
-
-// Create all the different AST node types. See the macros.rs file for how they're defined
-// and what traits are automatically implemented.
-container_type!(Document);
-container_type!(Paragraph);
-container_type!(BlockQuote);
-container_type!(List, (tight, bool), (ordered, bool), (start, u32));
-container_type!(ListItem, (index, u32));
-container_type!(Emphasis);
-container_type!(Strong);
-container_type!(Label);
-container_type!(Code);
-container_type!(CodeBlock, (language, Option<&'input str>));
-container_type!(Heading, (level, u8));
-container_type!(Link, (source, &'input str));
-leaf_type!(Text);
-leaf_type!(Linebreak);
-leaf_type!(SoftLinebreak);
-leaf_type!(Image, (source, &'input str));
 
 // -----------------------------------------------------------------------
 // While most of the types can have their TryFrom<Pair<'input, Rule>>

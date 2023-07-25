@@ -1,19 +1,18 @@
 use super::model::Node;
 
-///
 pub enum Direction {
     Entering,
     Exiting,
 }
 
-///
 pub enum NextAction {
     GotoNext,
     SkipChildren,
     End,
 }
 
-///
+/// Visitors can traverse the AST and perform action on each node. See [traverse](Node::traverse)
+/// for more information on how the visitor interacts with the tree.
 pub trait Visitor {
     fn visit(&self, node: &Node, action: Direction) -> NextAction;
 }
