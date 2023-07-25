@@ -1,32 +1,32 @@
 /// Sometimes, we need to extract the singleton child from a [`pest::iterator::Pair`] and fail if it's
-/// missing. This is normally to make the rule processing less verbose. For example, we can match on 
+/// missing. This is normally to make the rule processing less verbose. For example, we can match on
 /// the `link` rule, then extract the specific link variant for processing, and since we know that
 /// there must be a link variant as the only child of the node, we can raise an error if it's missing.
-/// 
+///
 /// # Parameters
-/// 
+///
 /// - `$value`: A [`pest::iterator::Pair`]. This value is consumed in the macro.
-/// 
+///
 /// # Returns
-/// 
+///
 /// A Result<pest::iterator::Pair, ParseError>. Will be the Err variant only if the value was missing.
 #[macro_export]
 macro_rules! first_child {
-  ($value: expr) => {
-      $value
-          .next()
-          .ok_or(ParseError::SyntaxError(format!("Missing required child in expression")))
-  };
+    ($value: expr) => {
+        $value.next().ok_or(ParseError::SyntaxError(format!(
+            "Missing required child in expression"
+        )))
+    };
 }
 
 /// Creates a struct to represent a container node, along with some trait implementations.
 /// Always requires an identifier for the name of the generated struct, and optionally accepts
 /// one more more tuples of (identifier, type) to add additional fields to the struct.
-/// 
+///
 /// This macro will always define the [`AsRef<Vec<Node<'input>>>`] trait for the generated struct,
-/// but will only create an implementation for [`TryFrom<Pair<'input, Rule>>`] if no extra fields 
+/// but will only create an implementation for [`TryFrom<Pair<'input, Rule>>`] if no extra fields
 /// are specified since there's no general way to parse those fields from the Pair.
-/// 
+///
 /// If extra fields are provided, the macro will create a non-mutating getter method for each field.
 #[macro_export]
 macro_rules! container_type {
@@ -119,16 +119,16 @@ macro_rules! container_type {
 /// Creates a struct to represent a leaf node, along with some trait implementations.
 /// Always requires an identifier for the name of the generated struct, and optionally accepts
 /// one more more tuples of (identifier, type) to add additional fields to the struct.
-/// 
+///
 /// This macro will always define the [`AsRef<str>`] trait for the generated struct,
-/// but will only create an implementation for [`TryFrom<Pair<'input, Rule>>`] if no extra fields 
+/// but will only create an implementation for [`TryFrom<Pair<'input, Rule>>`] if no extra fields
 /// are specified since there's no general way to parse those fields from the Pair.
-/// 
+///
 /// If extra fields are provided, the macro will create a non-mutating getter method for each field.
 #[macro_export]
 macro_rules! leaf_type {
   ($name: ident) => {
-      
+
         #[derive(std::fmt::Debug, PartialEq)]
         #[cfg_attr(feature = "serde_support", derive(serde::Serialize, serde::Deserialize))]
         pub struct $name<'input> {
@@ -149,7 +149,7 @@ macro_rules! leaf_type {
   };
 
   ($name: ident $(, ($field_name: ident, $ty: ty))+) => {
-      
+
       #[derive(std::fmt::Debug, PartialEq)]
       #[cfg_attr(feature = "serde_support", derive(serde::Serialize, serde::Deserialize))]
       pub struct $name<'input> {

@@ -5,14 +5,15 @@ use pest_derive::Parser;
 pub struct MarkdownParser;
 
 impl Rule {
-
-  pub fn is_plaintext(&self) -> bool {
-    match self {
-      Self::str | Self::symbol | Self::escaped_special_char | 
-      Self::source | Self::space | Self::non_space 
-        => true,
-      _ => false
+    pub fn is_plaintext(&self) -> bool {
+        matches!(
+            self,
+            Self::str
+                | Self::symbol
+                | Self::escaped_special_char
+                | Self::source
+                | Self::space
+                | Self::non_space
+        )
     }
-  }
-
 }
