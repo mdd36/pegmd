@@ -1,168 +1,175 @@
 {
-  "Paragraph": {
+  "Document": {
     "children": [
       {
-        "Strong": {
+        "Paragraph": {
           "children": [
             {
-              "Text": {
-                "literal": "This text is strong"
+              "Strong": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "This text is strong"
+                    }
+                  }
+                ]
               }
-            }
-          ]
-        }
-      },
-      {
-        "SoftLinebreak": {
-          "literal": "\n"
-        }
-      },
-      {
-        "Emphasis": {
-          "children": [
+            },
             {
-              "Text": {
-                "literal": "This text is emphasized"
+              "SoftLinebreak": {
+                "literal": "\n"
               }
-            }
-          ]
-        }
-      },
-      {
-        "SoftLinebreak": {
-          "literal": "\n"
-        }
-      },
-      {
-        "Link": {
-          "children": [
+            },
             {
-              "Text": {
-                "literal": "this is a link"
+              "Emphasis": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "This text is emphasized"
+                    }
+                  }
+                ]
               }
-            }
-          ],
-          "source": "https://github.com"
-        }
-      },
-      {
-        "SoftLinebreak": {
-          "literal": "\n"
-        }
-      },
-      {
-        "Link": {
-          "children": [
+            },
             {
-              "Text": {
-                "literal": "https://crates.io"
+              "SoftLinebreak": {
+                "literal": "\n"
               }
-            }
-          ],
-          "source": "https://crates.io"
-        }
-      },
-      {
-        "SoftLinebreak": {
-          "literal": "\n"
-        }
-      },
-      {
-        "Image": {
-          "literal": "huge mistake",
-          "source": "https://tenor.com/oDMG.gif"
-        }
-      },
-      {
-        "SoftLinebreak": {
-          "literal": "\n"
-        }
-      },
-      {
-        "Code": {
-          "children": [
+            },
             {
-              "Text": {
-                "literal": "print(\"hello world!\")"
+              "Link": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "this is a link"
+                    }
+                  }
+                ],
+                "source": "https://github.com"
               }
-            }
-          ]
-        }
-      },
-      {
-        "SoftLinebreak": {
-          "literal": "\n"
-        }
-      },
-      {
-        "Emphasis": {
-          "children": [
+            },
             {
-              "Text": {
-                "literal": "some "
+              "SoftLinebreak": {
+                "literal": "\n"
+              }
+            },
+            {
+              "Link": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "https://crates.io"
+                    }
+                  }
+                ],
+                "source": "https://crates.io"
+              }
+            },
+            {
+              "SoftLinebreak": {
+                "literal": "\n"
+              }
+            },
+            {
+              "Image": {
+                "literal": "huge mistake",
+                "source": "https://tenor.com/oDMG.gif"
+              }
+            },
+            {
+              "SoftLinebreak": {
+                "literal": "\n"
+              }
+            },
+            {
+              "Code": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "print(\"hello world!\")"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "SoftLinebreak": {
+                "literal": "\n"
+              }
+            },
+            {
+              "Emphasis": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "some "
+                    }
+                  },
+                  {
+                    "Strong": {
+                      "children": [
+                        {
+                          "Text": {
+                            "literal": "bold and emphasized"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "Text": {
+                      "literal": " text"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "SoftLinebreak": {
+                "literal": "\n"
               }
             },
             {
               "Strong": {
                 "children": [
                   {
-                    "Text": {
-                      "literal": "bold and emphasized"
+                    "Link": {
+                      "children": [
+                        {
+                          "Text": {
+                            "literal": "to boldly go"
+                          }
+                        }
+                      ],
+                      "source": "https://en.wikipedia.org/wiki/Where_no_man_has_gone_before"
                     }
                   }
                 ]
               }
             },
             {
-              "Text": {
-                "literal": " text"
+              "SoftLinebreak": {
+                "literal": "\n"
               }
-            }
-          ]
-        }
-      },
-      {
-        "SoftLinebreak": {
-          "literal": "\n"
-        }
-      },
-      {
-        "Strong": {
-          "children": [
+            },
             {
-              "Link": {
+              "Emphasis": {
                 "children": [
                   {
-                    "Text": {
-                      "literal": "to boldly go"
-                    }
-                  }
-                ],
-                "source": "https://en.wikipedia.org/wiki/Where_no_man_has_gone_before"
-              }
-            }
-          ]
-        }
-      },
-      {
-        "SoftLinebreak": {
-          "literal": "\n"
-        }
-      },
-      {
-        "Emphasis": {
-          "children": [
-            {
-              "Code": {
-                "children": [
-                  {
-                    "Text": {
-                      "literal": "echo 'hello world'"
+                    "Code": {
+                      "children": [
+                        {
+                          "Text": {
+                            "literal": "echo 'hello world'"
+                          }
+                        }
+                      ]
                     }
                   }
                 ]
               }
-            }
+            },
+            "EOI"
           ]
         }
       },

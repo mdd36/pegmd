@@ -26,15 +26,6 @@ pub fn parse_document(input: &str) -> Result<Node<'_>, ParseError> {
     Ok(document)
 }
 
-/// Rather than parsing the input to a [`Node::Document`], parse with a different [`Rule`]
-/// as the root. This is intended for internal testing only since it requires leaking
-/// the pest Rule type.
-fn parse_rule(input: &str, rule: Rule) -> Result<Node<'_>, ParseError> {
-    let mut raw_tokens = MarkdownParser::parse(rule, input)?;
-    let root = Node::try_from(first_child!(raw_tokens)?)?;
-    Ok(root)
-}
-
 #[cfg(all(feature = "serde_support", test))]
 pub mod test {
     use super::*;
@@ -44,8 +35,8 @@ pub mod test {
     #[test]
     pub fn markup_test() {
         let input = read_file_to_string("markdown/markup.md");
-        let root = parse_rule(&input, Rule::paragraph)
-            .unwrap_or_else(|e| panic!("Failed to parse document: {e}"));
+        let root =
+            parse_document(&input).unwrap_or_else(|e| panic!("Failed to parse document: {e}"));
         let actual = serde_json::to_string_pretty(&root)
             .unwrap_or_else(|e| panic!("Failed to serialize AST: {e}"));
         let expected = read_file_to_string("ast_json/markup.json");
