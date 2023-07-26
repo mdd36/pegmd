@@ -44,7 +44,7 @@
               }
             },
             {
-              "SoftLinebreak": {
+              "Text": {
                 "literal": "\n"
               }
             },

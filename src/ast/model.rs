@@ -288,7 +288,7 @@ impl<'input> TryFrom<Pair<'input, Rule>> for Node<'input> {
             | Rule::source
             | Rule::linebreak_literal => Ok(Node::Text(Text::from(value))),
             Rule::linebreak => Ok(Node::Linebreak(Linebreak::from(value))),
-            Rule::normal_endline | Rule::blockquote_linebreak => {
+            Rule::normal_endline => {
                 Ok(Node::SoftLinebreak(SoftLinebreak::from(value)))
             }
             Rule::thematic_break => Ok(Node::ThematicBreak(ThematicBreak::from(value))),

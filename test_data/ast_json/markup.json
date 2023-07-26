@@ -21,11 +21,43 @@
               }
             },
             {
+              "Strong": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "So is this"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "SoftLinebreak": {
+                "literal": "\n"
+              }
+            },
+            {
               "Emphasis": {
                 "children": [
                   {
                     "Text": {
                       "literal": "This text is emphasized"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "SoftLinebreak": {
+                "literal": "\n"
+              }
+            },
+            {
+              "Emphasis": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "And this"
                     }
                   }
                 ]
@@ -167,6 +199,16 @@
                     }
                   }
                 ]
+              }
+            },
+            {
+              "SoftLinebreak": {
+                "literal": "\n"
+              }
+            },
+            {
+              "Text": {
+                "literal": "*This one got escaped*"
               }
             },
             "EOI"

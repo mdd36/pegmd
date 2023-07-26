@@ -17,10 +17,11 @@ single_quote = _{ "'" }
 special_char = _{ "~" | "*" | "_" | "`" | "&" | "[" | "]" | "(" | ")" | "<" | "!" | "#" | "\\" | "\"" }
 normal_char = _{ !special_char ~ !NEWLINE ~ !space ~ ANY }
 non_space = { !NEWLINE ~ !space ~ ANY }
-escaped_special_char = { "\\" ~ ("-" | "\\" | "`" | "|" | "*" | "#" | "+" | "." | "!" | "_" | "{" | "}" | "[" | "]" | "(" | ")" | "<" |">")} 
+control_character = { "-" | "\\" | "`" | "|" | "*" | "#" | "+" | "." | "!" | "_" | "{" | "}" | "[" | "]" | "(" | ")" | "<" |">" }
+escaped_special_char = _{ "\\" ~ control_character } 
 
 markup = _{ strong | emphasis | code | image | link }
-str = { normal_char+ ~ (normal_char | "_"+ ~ &normal_char)* }
+str = { normal_char+ ~ (normal_char | space+ ~ &normal_char)* }
 symbol = { special_char }
 
 normal_endline = { space? ~ NEWLINE ~ !(blank_line | indent | thematic_break | block_quote_open | non_indent_space? ~ (atx_hash | "1. " | "1) " | !star_strong ~ !star_emphasis ~ bullet)) }
@@ -41,8 +42,7 @@ thematic_break = { star_line | dash_line | underscore_line }
 
 paragraph = { non_indent_space? ~ inlines ~ (blank_line+ | EOI) }
 block_quote_open = _{ non_indent_space? ~ ">" }
-blockquote_linebreak = { NEWLINE }
-verbatim = { (block_quote_open ~ silent_space* ~ inline* ~ (blockquote_linebreak ~ &block_quote_open)?)+ ~ NEWLINE? }
+verbatim = { (block_quote_open ~ silent_space* ~ inline* ~ (linebreak_literal ~ &block_quote_open)?)+ ~ NEWLINE? }
 
 atx_hash = { "#"{1,6} ~ !"#" }
 header = { 
@@ -232,7 +232,6 @@ indented_codeblock = {
   DROP 
 }
 
-
 code_block = _{ fenced_codeblock | indented_codeblock }
 
 reference_source = { non_space+ }
@@ -240,7 +239,6 @@ reference_title = {
     single_quote ~ (!(single_quote ~ space* ~ NEWLINE) ~ ANY)* ~ single_quote
   | double_quote ~ (!(double_quote ~ space* ~ NEWLINE) ~ ANY)* ~ double_quote
 }
-
 reference = { non_indent_space ~ !"[]" ~ "[" ~ label ~ "]:" ~ (space | NEWLINE ~ space) ~ reference_source ~ reference_title? }
 
 shortcut_reference_link = { "[" ~ label ~ "]" ~ "[]"? }
