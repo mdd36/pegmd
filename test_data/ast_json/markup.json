@@ -106,13 +106,7 @@
             },
             {
               "Image": {
-                "children": [
-                  {
-                    "Text": {
-                      "literal": "huge mistake"
-                    }
-                  }
-                ],
+                "literal": "huge mistake",
                 "source": "https://tenor.com/oDMG.gif",
                 "title": null
               }
@@ -218,7 +212,12 @@
             },
             {
               "Text": {
-                "literal": "*This one got escaped*"
+                "literal": "*"
+              }
+            },
+            {
+              "Text": {
+                "literal": "This one got escaped*"
               }
             },
             {

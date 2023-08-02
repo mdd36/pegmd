@@ -14,7 +14,6 @@ mod parser {
                 self,
                 Self::str
                     | Self::symbol
-                    | Self::control_character
                     | Self::source
                     | Self::space
                     | Self::non_space
