@@ -1,4 +1,7 @@
 # pegmd
+[![Build](https://github.com/mdd36/pegmd/actions/workflows/rust.yml/badge.svg)](https://github.com/mdd36/pegmd/actions/workflows/rust.yml)
+[![crates.io](https://img.shields.io/crates/d/pegmd.svg)](https://crates.io/crates/pegmd)
+[![docs](https://docs.rs/pest/badge.svg)](https://docs.rs/pegmd)  
 Parses a Markdown document that follows [CommonMark v0.30](https://spec.commonmark.org/0.30/) to an abstract syntax tree by defining its parsing expression
 grammar (PEG) with [pest](https://pest.rs/book/). The crate also optionally provides a transformer to emit the AST as HTML if the `html` feature included.
 
@@ -19,7 +22,6 @@ If the `html` feature is enabled, the crate provides the `html::HTMLTransformer`
 ## Current Limitations
 While the end goal for the parser is to support the entire CommonMark spec, it currently doesn't support:
 
-- [Reference links](https://spec.commonmark.org/0.30/#link-reference-definitions)
 - [HTML blocks](https://spec.commonmark.org/0.30/#html-blocks)
 - [Setext headings](https://spec.commonmark.org/0.30/#setext-headings)
 - [ATX headings with closing hashes](https://spec.commonmark.org/0.30/#example-71)
