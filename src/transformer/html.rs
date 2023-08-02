@@ -1,8 +1,38 @@
-use crate::ast::model::{CodeBlock, Heading, Image, Link, List, Node};
+use crate::ast::model::{CodeBlock, Heading, Link, List, Node, Reference, Image};
 use crate::ast::traversal::{Direction, NextAction, Visitor};
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fmt::Display;
 use std::io::Write;
+
+#[derive(Default, Debug)]
+pub struct LinkResolver<'a> {
+    name_to_reference_table: RefCell<HashMap<&'a str, &'a Reference<'a>>>
+}
+
+impl <'a> LinkResolver<'a> {
+
+    pub fn resolve(&self, name: &str) -> Option<&'a Reference<'a>> {
+        self.name_to_reference_table.borrow()
+            .get(name)
+            .map(|reference| *reference)
+    }
+
+}
+
+impl <'a> Visitor<'a> for LinkResolver<'a> {
+    fn visit(&self, node: &'a Node<'a>, _direction: Direction) -> NextAction {
+        match node {
+            Node::Reference(reference) => {
+                self.name_to_reference_table.borrow_mut().insert(reference.name(), reference);
+                NextAction::GotoNext
+            }
+            Node::Document(_) => NextAction::GotoNext,
+            _ => NextAction::SkipChildren 
+        }
+    }
+}
+
 
 #[derive(Debug)]
 struct ListContext {
@@ -21,7 +51,7 @@ impl<'a> From<&List<'a>> for ListContext {
 
 #[derive(Debug, Default)]
 struct GenerationContext {
-    list_context: Vec<ListContext>,
+    list_context: Vec<ListContext>
 }
 
 impl GenerationContext {
@@ -62,14 +92,15 @@ impl std::fmt::Display for RenderError {
 
 /// An implementation of [`Visitor`] that generates HTML from AST.
 #[derive(Default)]
-pub struct HTMLRenderer {
+pub struct HTMLRenderer<'a> {
     output: RefCell<Vec<u8>>,
     context: RefCell<GenerationContext>,
+    link_table: LinkResolver<'a>,
 }
 
 /// A slightly nicer debug implementation that converts the output to a string rather than
 /// writing the raw hex bytes.
-impl std::fmt::Debug for HTMLRenderer {
+impl <'a> std::fmt::Debug for HTMLRenderer<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Ok(s) = std::str::from_utf8(self.output.borrow().as_slice()) {
             f.debug_struct("HTMLRenderer")
@@ -85,7 +116,14 @@ impl std::fmt::Debug for HTMLRenderer {
     }
 }
 
-impl HTMLRenderer {
+impl <'a> HTMLRenderer<'a> {
+    pub fn with_resolver(resolver: LinkResolver<'a>) -> Self {
+        Self {
+            link_table: resolver,
+            ..Default::default()
+        }
+    }
+
     /// Create an HTML renderer with a pre-allocated buffer, ensuring that it will
     /// be able to hold at least `capacity` bytes without reallocating.
     pub fn with_capacity(capacity: usize) -> Self {
@@ -121,17 +159,23 @@ impl HTMLRenderer {
 
     fn link(&self, link: &Link, action: Direction) -> Result<(), RenderError> {
         if let Direction::Entering = action {
-            let source = link.source();
-            self.tag_with_attrs("a", &[("href", source)], false)?;
+            let (source, title) = match self.link_table.resolve(link.source()) {
+                Some(reference) => (reference.source(), reference.title()),
+                None => (link.source(), link.title())
+            };
+            match title {
+                Some(t) => self.tag_with_attrs("a", &[("href", source), ("title", t)], false)?,
+                None => self.tag_with_attrs("a", &[("href", source)], false)?,
+            };
         } else {
             write!(self.output.borrow_mut(), "</a>")?;
         }
         Ok(())
     }
 
-    fn image(&self, link: &Image) -> Result<(), RenderError> {
-        let source = link.source();
-        let alt = link.as_span();
+    fn image(&self, image: &Image) -> Result<(), RenderError> {
+        let source = image.source();
+        let alt = image.as_span();
         self.tag_with_attrs("img", &[("src", source), ("alt", alt)], true)
     }
 
@@ -240,7 +284,7 @@ impl HTMLRenderer {
     }
 }
 
-impl Visitor for HTMLRenderer {
+impl <'a> Visitor<'_> for HTMLRenderer<'a> {
     fn visit(&self, node: &Node, action: Direction) -> NextAction {
         let emit_result = match node {
             Node::Document(_) => self.document(action),
@@ -266,6 +310,7 @@ impl Visitor for HTMLRenderer {
             Node::ThematicBreak(_) =>  {
                 write!(self.output.borrow_mut(), "<hr/>").map_err(RenderError::from)
             }
+            Node::Reference(_) => return NextAction::GotoNext,
             Node::EOI => Ok(()),
         };
 
@@ -279,7 +324,7 @@ impl Visitor for HTMLRenderer {
     }
 }
 
-impl Display for HTMLRenderer {
+impl <'a> Display for HTMLRenderer<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match std::str::from_utf8(self.output.borrow().as_slice()) {
             Ok(s) => write!(f, "{}", s),
@@ -300,7 +345,9 @@ mod test {
         let input = read_file_to_string("markdown/markup.md");
         let root =
             parse_document(&input).unwrap_or_else(|e| panic!("Failed to parse document: {e}"));
-        let html_renderer = HTMLRenderer::default();
+        let link_resolver = LinkResolver::default();
+        root.traverse(&link_resolver);
+        let html_renderer = HTMLRenderer::with_resolver(link_resolver);
         root.traverse(&html_renderer);
         let actual = html_renderer.to_string();
         let expected = read_file_to_string("html/markup.html");

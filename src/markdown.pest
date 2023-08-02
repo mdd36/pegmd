@@ -17,7 +17,7 @@ single_quote = _{ "'" }
 special_char = _{ "~" | "*" | "_" | "`" | "&" | "[" | "]" | "(" | ")" | "<" | "!" | "#" | "\\" | "\"" }
 normal_char = _{ !special_char ~ !NEWLINE ~ !space ~ ANY }
 non_space = { !NEWLINE ~ !space ~ ANY }
-control_character = { "-" | "\\" | "`" | "|" | "*" | "#" | "+" | "." | "!" | "_" | "{" | "}" | "[" | "]" | "(" | ")" | "<" |">" }
+control_character = { "-" | "\\" | "`" | "|" | "*" | "#" | "+" | "." | "!" | "_" | "{" | "}" | "[" | "]" | "(" | ")" | "<" |">" | "\"" | "'" }
 escaped_special_char = _{ "\\" ~ control_character } 
 
 markup = _{ strong | emphasis | code | image | link }
@@ -235,18 +235,28 @@ indented_codeblock = {
 code_block = _{ fenced_codeblock | indented_codeblock }
 
 reference_source = { non_space+ }
-reference_title = { 
-    single_quote ~ (!(single_quote ~ space* ~ NEWLINE) ~ ANY)* ~ single_quote
-  | double_quote ~ (!(double_quote ~ space* ~ NEWLINE) ~ ANY)* ~ double_quote
+
+link_title = { 
+    single_quote ~ (!single_quote ~ !blank_line ~ (escaped_special_char | space | non_space))* ~ single_quote
+  | double_quote ~ (!double_quote ~ !blank_line ~ (escaped_special_char | space | non_space))* ~ double_quote
+  | "(" ~ (!")" ~ !blank_line ~ (escaped_special_char | space | non_space))* ~ ")" ~ &")"
 }
-reference = { non_indent_space ~ !"[]" ~ "[" ~ label ~ "]:" ~ (space | NEWLINE ~ space) ~ reference_source ~ reference_title? }
+reference = { 
+  non_indent_space? ~ 
+  !"[]" ~ "[" ~ label ~ "]:" ~ (silent_space+ | NEWLINE ~ silent_space*) ~ reference_source ~ 
+  ((silent_space* ~ NEWLINE ~ silent_space* | silent_space+) ~ link_title)?
+}
 
 shortcut_reference_link = { "[" ~ label ~ "]" ~ "[]"? }
 full_reference_link = { "[" ~ label ~ "]" ~ !"[]" ~ "[" ~ label ~ "]" }
 reference_link = _{ full_reference_link | shortcut_reference_link }
 
-directed_link = { "[" ~ label ~ "](" ~ source ~ ")" }
+directed_link = {
+  "[" ~ label ~ "](" ~ source ~ 
+  ((silent_space* ~ NEWLINE ~ silent_space* | silent_space+) ~ link_title)? 
+  ~ ")"
+}
 autolink = { "<" ~ source ~ ">" }
 link = { directed_link | reference_link | autolink }
 
-image = { !"\\" ~ "!" ~ directed_link }
+image = { !"\\" ~ "!" ~ (directed_link | reference_link) }

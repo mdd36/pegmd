@@ -46,8 +46,7 @@ impl<'input> std::fmt::Debug for Children<'input> {
 
 impl<'input> Children<'input> {
     /// This method is a little gross, but it handles coalescing adjacent plaintext parser tokens
-    /// into a single [`Node::Text`], as a naïve implementation would produce a single text node
-    /// for every word, space, special character, and escaped control character. By collapsing them
+    /// into a single [`Node::Text`]. By collapsing them
     /// into a single Node, we reduce the memory footprint of the final AST and make it easier
     /// for traversal implementations to reason about the nodes in the tree.
     pub fn try_from_pairs(
@@ -129,12 +128,13 @@ container_type!(Label);
 container_type!(Code);
 container_type!(CodeBlock, (language, Option<&'input str>));
 container_type!(Heading, (level, u8));
-container_type!(Link, (source, &'input str));
+container_type!(Link, (source, &'input str), (title, Option<&'input str>));
 leaf_type!(Text);
 leaf_type!(Linebreak);
 leaf_type!(SoftLinebreak);
-leaf_type!(Image, (source, &'input str));
+leaf_type!(Image, (source, &'input str), (title, Option<&'input str>));
 leaf_type!(ThematicBreak);
+leaf_type!(Reference, (name, &'input str), (source, &'input str), (title, Option<&'input str>));
 
 /// for that type, except for EOI since EOI contains nothing by definition.
 ///
@@ -168,6 +168,7 @@ pub enum Node<'input> {
     SoftLinebreak(SoftLinebreak<'input>),
     Code(Code<'input>),
     ThematicBreak(ThematicBreak<'input>),
+    Reference(Reference<'input>),
     // End of input
     EOI,
 }
@@ -192,6 +193,7 @@ impl<'input> Node<'input> {
             Self::Linebreak(_) => None,
             Self::SoftLinebreak(_) => None,
             Self::ThematicBreak(_) => None,
+            Self::Reference(_) => None,
             Self::EOI => None,
         }
     }
@@ -215,6 +217,7 @@ impl<'input> Node<'input> {
             Self::Linebreak(_) => None,
             Self::SoftLinebreak(_) => None,
             Self::ThematicBreak(_) => None,
+            Self::Reference(_) => None,
             Self::EOI => None,
         }
     }
@@ -238,6 +241,7 @@ impl<'input> Node<'input> {
             Self::Linebreak(lb) => lb.as_span(),
             Self::SoftLinebreak(slb) => slb.as_span(),
             Self::ThematicBreak(tb) => tb.as_span(),
+            Self::Reference(r) => r.as_span(), 
             Self::EOI => "EOI",
         }
     }
@@ -292,6 +296,7 @@ impl<'input> TryFrom<Pair<'input, Rule>> for Node<'input> {
                 Ok(Node::SoftLinebreak(SoftLinebreak::from(value)))
             }
             Rule::thematic_break => Ok(Node::ThematicBreak(ThematicBreak::from(value))),
+            Rule::reference => Ok(Node::Reference(Reference::from(value))),
             // End of input
             Rule::EOI => Ok(Node::EOI),
             // Error
@@ -483,6 +488,13 @@ impl<'input> TryFrom<Pair<'input, Rule>> for Link<'input> {
             None => label_node.as_str(),
         };
 
+        // There might be one more node for the title
+        let title = inner_nodes.next().map(|node| {
+            let title_with_quotes = node.as_str();
+            let total_length = title_with_quotes.len();
+            &title_with_quotes[1..(total_length - 1)]
+        });
+
         // Now we can do this since we've extracted the source as a str in the case where
         // the link is an autolink.
         let children = Children::try_from(label_node)?;
@@ -491,6 +503,7 @@ impl<'input> TryFrom<Pair<'input, Rule>> for Link<'input> {
             children,
             span,
             source,
+            title,
         })
     }
 }
@@ -515,10 +528,36 @@ impl<'input> TryFrom<Pair<'input, Rule>> for Image<'input> {
                 r#"No source found for link in "{link_as_str}". Error occurred at: {location:?}"#
             )))?
             .as_str();
+        let title = children.next().map(|node| node.as_str());
 
         Ok(Self {
             literal: alt,
             source,
+            title,
         })
+    }
+}
+
+impl <'input> From<Pair<'input, Rule>> for Reference<'input> {
+    fn from(value: Pair<'input, Rule>) -> Self {
+        let literal = value.as_str();
+        let mut children = value.into_inner();
+        
+        let name = children.next()
+            .unwrap()
+            .as_str();
+        let source = children.next().unwrap().as_str();
+        let title = children.next().map(|node| {
+            let title_with_quotes = node.as_str();
+            let total_length = title_with_quotes.len();
+            &title_with_quotes[1..(total_length - 1)]
+        });
+        
+        Self {
+            literal,
+            name,
+            source,
+            title,
+        }
     }
 }

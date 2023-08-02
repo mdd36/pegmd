@@ -77,7 +77,8 @@
                     }
                   }
                 ],
-                "source": "https://github.com"
+                "source": "https://github.com",
+                "title": null
               }
             },
             {
@@ -94,7 +95,8 @@
                     }
                   }
                 ],
-                "source": "https://crates.io"
+                "source": "https://crates.io",
+                "title": null
               }
             },
             {
@@ -104,8 +106,15 @@
             },
             {
               "Image": {
-                "literal": "huge mistake",
-                "source": "https://tenor.com/oDMG.gif"
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "huge mistake"
+                    }
+                  }
+                ],
+                "source": "https://tenor.com/oDMG.gif",
+                "title": null
               }
             },
             {
@@ -173,7 +182,8 @@
                           }
                         }
                       ],
-                      "source": "https://en.wikipedia.org/wiki/Where_no_man_has_gone_before"
+                      "source": "https://en.wikipedia.org/wiki/Where_no_man_has_gone_before",
+                      "title": null
                     }
                   }
                 ]
@@ -211,8 +221,131 @@
                 "literal": "*This one got escaped*"
               }
             },
-            "EOI"
+            {
+              "SoftLinebreak": {
+                "literal": "\n"
+              }
+            },
+            {
+              "Link": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "A link with a"
+                    }
+                  }
+                ],
+                "source": "https://www.google.com",
+                "title": "title'()"
+              }
+            },
+            {
+              "SoftLinebreak": {
+                "literal": "\n"
+              }
+            },
+            {
+              "Link": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "A link with a"
+                    }
+                  }
+                ],
+                "source": "https://www.google.com",
+                "title": "title\"()"
+              }
+            },
+            {
+              "SoftLinebreak": {
+                "literal": "\n"
+              }
+            },
+            {
+              "Link": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "A link with a"
+                    }
+                  }
+                ],
+                "source": "https://www.google.com",
+                "title": "title'\""
+              }
+            },
+            {
+              "SoftLinebreak": {
+                "literal": "\n"
+              }
+            },
+            {
+              "Link": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "A link with a"
+                    }
+                  }
+                ],
+                "source": "https://www.google.com",
+                "title": "title'\""
+              }
+            },
+            {
+              "SoftLinebreak": {
+                "literal": "\n"
+              }
+            },
+            {
+              "Link": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "Reference 1"
+                    }
+                  }
+                ],
+                "source": "Reference 1",
+                "title": null
+              }
+            },
+            {
+              "SoftLinebreak": {
+                "literal": "\n"
+              }
+            },
+            {
+              "Link": {
+                "children": [
+                  {
+                    "Text": {
+                      "literal": "Named"
+                    }
+                  }
+                ],
+                "source": "Reference 2",
+                "title": null
+              }
+            }
           ]
+        }
+      },
+      {
+        "Reference": {
+          "literal": "[Reference 1]: https://foo.bar \"A title\"",
+          "name": "Reference 1",
+          "source": "https://foo.bar",
+          "title": "A title"
+        }
+      },
+      {
+        "Reference": {
+          "literal": "[Reference 2]: https://x.y",
+          "name": "Reference 2",
+          "source": "https://x.y",
+          "title": null
         }
       },
       "EOI"

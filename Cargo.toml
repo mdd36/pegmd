@@ -1,6 +1,6 @@
 [package]
 name = "pegmd"
-version = "0.2.1"
+version = "0.2.2"
 authors = [ "Matthew Dickson <hi@mattdickson.io>" ]
 edition = "2021"
 description = "A PEG based markdown parser for creating an Abstract Syntax Tree"
