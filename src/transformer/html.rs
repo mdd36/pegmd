@@ -1,4 +1,4 @@
-use crate::ast::model::{CodeBlock, Heading, Link, List, Node, Reference, Image};
+use crate::ast::model::{CodeBlock, Heading, Image, Link, List, Node, Reference};
 use crate::ast::traversal::{Direction, NextAction, Visitor};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -7,32 +7,32 @@ use std::io::Write;
 
 #[derive(Default, Debug)]
 pub struct LinkResolver<'a> {
-    name_to_reference_table: RefCell<HashMap<&'a str, &'a Reference<'a>>>
+    name_to_reference_table: RefCell<HashMap<&'a str, &'a Reference<'a>>>,
 }
 
-impl <'a> LinkResolver<'a> {
-
+impl<'a> LinkResolver<'a> {
     pub fn resolve(&self, name: &str) -> Option<&'a Reference<'a>> {
-        self.name_to_reference_table.borrow()
+        self.name_to_reference_table
+            .borrow()
             .get(name)
             .map(|reference| *reference)
     }
-
 }
 
-impl <'a> Visitor<'a> for LinkResolver<'a> {
+impl<'a> Visitor<'a> for LinkResolver<'a> {
     fn visit(&self, node: &'a Node<'a>, _direction: Direction) -> NextAction {
         match node {
             Node::Reference(reference) => {
-                self.name_to_reference_table.borrow_mut().insert(reference.name(), reference);
+                self.name_to_reference_table
+                    .borrow_mut()
+                    .insert(reference.name(), reference);
                 NextAction::GotoNext
             }
             Node::Document(_) => NextAction::GotoNext,
-            _ => NextAction::SkipChildren 
+            _ => NextAction::SkipChildren,
         }
     }
 }
-
 
 #[derive(Debug)]
 struct ListContext {
@@ -51,7 +51,7 @@ impl<'a> From<&List<'a>> for ListContext {
 
 #[derive(Debug, Default)]
 struct GenerationContext {
-    list_context: Vec<ListContext>
+    list_context: Vec<ListContext>,
 }
 
 impl GenerationContext {
@@ -100,7 +100,7 @@ pub struct HTMLRenderer<'a> {
 
 /// A slightly nicer debug implementation that converts the output to a string rather than
 /// writing the raw hex bytes.
-impl <'a> std::fmt::Debug for HTMLRenderer<'a> {
+impl<'a> std::fmt::Debug for HTMLRenderer<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Ok(s) = std::str::from_utf8(self.output.borrow().as_slice()) {
             f.debug_struct("HTMLRenderer")
@@ -116,7 +116,7 @@ impl <'a> std::fmt::Debug for HTMLRenderer<'a> {
     }
 }
 
-impl <'a> HTMLRenderer<'a> {
+impl<'a> HTMLRenderer<'a> {
     pub fn with_resolver(resolver: LinkResolver<'a>) -> Self {
         Self {
             link_table: resolver,
@@ -161,7 +161,7 @@ impl <'a> HTMLRenderer<'a> {
         if let Direction::Entering = action {
             let (source, title) = match self.link_table.resolve(link.source()) {
                 Some(reference) => (reference.source(), reference.title()),
-                None => (link.source(), link.title())
+                None => (link.source(), link.title()),
             };
             match title {
                 Some(t) => self.tag_with_attrs("a", &[("href", source), ("title", t)], false)?,
@@ -284,7 +284,7 @@ impl <'a> HTMLRenderer<'a> {
     }
 }
 
-impl <'a> Visitor<'_> for HTMLRenderer<'a> {
+impl<'a> Visitor<'_> for HTMLRenderer<'a> {
     fn visit(&self, node: &Node, action: Direction) -> NextAction {
         let emit_result = match node {
             Node::Document(_) => self.document(action),
@@ -307,7 +307,7 @@ impl <'a> Visitor<'_> for HTMLRenderer<'a> {
                 write!(self.output.borrow_mut(), " ").map_err(RenderError::from)
             }
             Node::Label(_) => return NextAction::GotoNext,
-            Node::ThematicBreak(_) =>  {
+            Node::ThematicBreak(_) => {
                 write!(self.output.borrow_mut(), "<hr/>").map_err(RenderError::from)
             }
             Node::Reference(_) => return NextAction::GotoNext,
@@ -324,7 +324,7 @@ impl <'a> Visitor<'_> for HTMLRenderer<'a> {
     }
 }
 
-impl <'a> Display for HTMLRenderer<'a> {
+impl<'a> Display for HTMLRenderer<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match std::str::from_utf8(self.output.borrow().as_slice()) {
             Ok(s) => write!(f, "{}", s),

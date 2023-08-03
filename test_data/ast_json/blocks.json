@@ -181,7 +181,7 @@
               }
             }
           ],
-          "tight": false,
+          "tight": true,
           "ordered": false,
           "start": 1
         }

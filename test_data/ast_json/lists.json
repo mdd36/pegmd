@@ -43,7 +43,19 @@
                             "children": [
                               {
                                 "Text": {
-                                  "literal": "But it has a tight sublist"
+                                  "literal": "But it has a"
+                                }
+                              }
+                            ],
+                            "index": 1
+                          }
+                        },
+                        {
+                          "ListItem": {
+                            "children": [
+                              {
+                                "Text": {
+                                  "literal": "tight sublist"
                                 }
                               }
                             ],

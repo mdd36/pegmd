@@ -1,7 +1,8 @@
 - Some *complex list tests*
 
 - This one is loose
-  * But it has a tight sublist
+  * But it has a
+  * tight sublist
 
 1. This one is ordered
   6. And its sublist starts at 6

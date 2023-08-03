@@ -75,13 +75,12 @@ continued_list_block = _{
   (section_contents) // Match a single section
 }
 
+star_bullet_item_tight = { star_bullet ~ list_item_contents_tight ~ NEWLINE? }
+dash_bullet_item_tight = { dash_bullet ~ list_item_contents_tight ~ NEWLINE? }
+plus_bullet_item_tight = { plus_bullet ~ list_item_contents_tight ~ NEWLINE? }
 
-star_bullet_item_tight = { star_bullet ~ list_item_contents_tight }
-dash_bullet_item_tight = { dash_bullet ~ list_item_contents_tight }
-plus_bullet_item_tight = { plus_bullet ~ list_item_contents_tight }
-
-period_ordered_list_item_tight = { list_index ~ "." ~ silent_space+ ~ list_item_contents_tight }
-parenthesis_ordered_list_item_tight = { list_index ~ ")" ~ silent_space+ ~ list_item_contents_tight }
+period_ordered_list_item_tight = { list_index ~ "." ~ silent_space+ ~ list_item_contents_tight ~ NEWLINE? }
+parenthesis_ordered_list_item_tight = { list_index ~ ")" ~ silent_space+ ~ list_item_contents_tight ~ NEWLINE? }
 
 star_bullet_item = { star_bullet ~ list_item_contents }
 dash_bullet_item = { dash_bullet ~ list_item_contents }
@@ -172,7 +171,7 @@ list_item_contents = ${
 
 list_item_contents_tight = ${
   inline_list_block ~
-  (continued_list_block)*
+  continued_list_block*
 }
 
 list_tight = { 

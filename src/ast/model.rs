@@ -134,7 +134,12 @@ leaf_type!(Linebreak);
 leaf_type!(SoftLinebreak);
 leaf_type!(Image, (source, &'input str), (title, Option<&'input str>));
 leaf_type!(ThematicBreak);
-leaf_type!(Reference, (name, &'input str), (source, &'input str), (title, Option<&'input str>));
+leaf_type!(
+    Reference,
+    (name, &'input str),
+    (source, &'input str),
+    (title, Option<&'input str>)
+);
 
 /// for that type, except for EOI since EOI contains nothing by definition.
 ///
@@ -241,7 +246,7 @@ impl<'input> Node<'input> {
             Self::Linebreak(lb) => lb.as_span(),
             Self::SoftLinebreak(slb) => slb.as_span(),
             Self::ThematicBreak(tb) => tb.as_span(),
-            Self::Reference(r) => r.as_span(), 
+            Self::Reference(r) => r.as_span(),
             Self::EOI => "EOI",
         }
     }
@@ -292,9 +297,7 @@ impl<'input> TryFrom<Pair<'input, Rule>> for Node<'input> {
             | Rule::source
             | Rule::linebreak_literal => Ok(Node::Text(Text::from(value))),
             Rule::linebreak => Ok(Node::Linebreak(Linebreak::from(value))),
-            Rule::normal_endline => {
-                Ok(Node::SoftLinebreak(SoftLinebreak::from(value)))
-            }
+            Rule::normal_endline => Ok(Node::SoftLinebreak(SoftLinebreak::from(value))),
             Rule::thematic_break => Ok(Node::ThematicBreak(ThematicBreak::from(value))),
             Rule::reference => Ok(Node::Reference(Reference::from(value))),
             // End of input
@@ -538,21 +541,19 @@ impl<'input> TryFrom<Pair<'input, Rule>> for Image<'input> {
     }
 }
 
-impl <'input> From<Pair<'input, Rule>> for Reference<'input> {
+impl<'input> From<Pair<'input, Rule>> for Reference<'input> {
     fn from(value: Pair<'input, Rule>) -> Self {
         let literal = value.as_str();
         let mut children = value.into_inner();
-        
-        let name = children.next()
-            .unwrap()
-            .as_str();
+
+        let name = children.next().unwrap().as_str();
         let source = children.next().unwrap().as_str();
         let title = children.next().map(|node| {
             let title_with_quotes = node.as_str();
             let total_length = title_with_quotes.len();
             &title_with_quotes[1..(total_length - 1)]
         });
-        
+
         Self {
             literal,
             name,

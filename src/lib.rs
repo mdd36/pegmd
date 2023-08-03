@@ -12,11 +12,7 @@ mod parser {
         pub fn is_plaintext(&self) -> bool {
             matches!(
                 self,
-                Self::str
-                    | Self::symbol
-                    | Self::source
-                    | Self::space
-                    | Self::non_space
+                Self::str | Self::symbol | Self::source | Self::space | Self::non_space
             )
         }
     }
