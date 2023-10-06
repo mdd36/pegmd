@@ -5,7 +5,7 @@ use crate::{container_type, error::ParseError, first_child, leaf_type, parser::R
 /// A newtype wrapper over a Vec<Node>, largely so that we can implement conversion traits
 /// between a [`Pair`] and a Vec. This type implements [`std::ops::Deref`] to its wrapped
 /// vector to improve developer ergonomics.
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 #[cfg_attr(
     feature = "serde_support",
     derive(serde::Serialize, serde::Deserialize)
@@ -147,7 +147,7 @@ leaf_type!(
 ///
 /// * `'input` - The lifetime is constrained to the lifetime of the input to the parser
 ///              since leaf nodes like Text contain a string slice from the original input.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
     feature = "serde_support",
     derive(serde::Deserialize, serde::Serialize)

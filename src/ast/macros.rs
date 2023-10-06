@@ -31,7 +31,7 @@ macro_rules! first_child {
 #[macro_export]
 macro_rules! container_type {
     ($name:ident) => {
-        #[derive(std::fmt::Debug, PartialEq)]
+        #[derive(std::fmt::Debug, PartialEq, Clone)]
         #[cfg_attr(feature = "serde_support", derive(serde::Serialize, serde::Deserialize))]
         pub struct $name<'input> {
             children: Children<'input>,
@@ -73,7 +73,7 @@ macro_rules! container_type {
     };
 
     ($name: ident $(, ($field_name: ident, $ty: ty))+) => {
-        #[derive(std::fmt::Debug, PartialEq)]
+        #[derive(std::fmt::Debug, PartialEq, Clone)]
         #[cfg_attr(feature = "serde_support", derive(serde::Serialize, serde::Deserialize))]
         pub struct $name<'input> {
             children: Children<'input>,
@@ -129,7 +129,7 @@ macro_rules! container_type {
 macro_rules! leaf_type {
     ($name: ident) => {
 
-        #[derive(std::fmt::Debug, PartialEq)]
+        #[derive(std::fmt::Debug, PartialEq, Clone)]
         #[cfg_attr(feature = "serde_support", derive(serde::Serialize, serde::Deserialize))]
         pub struct $name<'input> {
             literal: &'input str,
@@ -156,7 +156,7 @@ macro_rules! leaf_type {
 
     ($name: ident $(, ($field_name: ident, $ty: ty))+) => {
 
-        #[derive(std::fmt::Debug, PartialEq)]
+        #[derive(std::fmt::Debug, PartialEq, Clone)]
         #[cfg_attr(feature = "serde_support", derive(serde::Serialize, serde::Deserialize))]
         pub struct $name<'input> {
             literal: &'input str,
